@@ -1,7 +1,7 @@
 <Simulation>
 
   <Include href="../Includes/NaoV6H25.rsi3"/>
-  <Include href="../Includes/7vs7.rsi3"/>
+  <Include href="../Includes/5vs5.rsi3"/>
   <Include href="../Includes/Ball2016SPL.rsi3"/>
   <Include href="../Includes/Field2020SPL.rsi3"/>
 

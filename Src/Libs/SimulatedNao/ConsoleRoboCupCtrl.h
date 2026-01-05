@@ -9,6 +9,7 @@
 #pragma once
 
 #include <set>
+#include <memory>
 #include <QDir>
 #include <QString>
 
@@ -18,6 +19,7 @@
 
 class ConsoleView;
 class RemoteConsole;
+class CommandServer;
 
 /**
  * The class implements the SimRobot controller for RoboCup.
@@ -50,6 +52,7 @@ private:
   const RobotConsole::PlotViews* plotViews = nullptr; /**< Points to the map of plot views used for tab-completion. */
   BHToolBar toolBar; /**< The toolbar shown for this controller. */
   QString statusText; /**< The text to be printed in the status bar. */
+  std::unique_ptr<CommandServer> commandServer; /**< TCP server for external commands. */
 
 public:
   /**

@@ -15,6 +15,8 @@
 #include "Platform/Time.h"
 #include "Representations/Configuration/RobotDimensions.h"
 #include <algorithm>
+#include <cstring>
+#include <iostream>
 #include <SimRobotCore3.h>
 
 GameController::GameController() :
@@ -70,6 +72,185 @@ void GameController::loadBallSpecification()
     footLength = robotDimensions.footLength + 10.f;
     dropHeight = robotDimensions.simOriginHeight + 20.f;
     penaltyPlacementDistance = robotDimensions.armOffset.y() * 2.f + 300.f;
+  }
+}
+
+bool GameController::enableExternalGameController(bool enable)
+{
+  useExternalGC = enable;
+  if(enable)
+  {
+    // Initialize UDP socket to receive GameController messages on port 3838
+    if(!externalGCSocket.setBlocking(false))
+      return false;
+    if(!externalGCSocket.bind("0.0.0.0", GAMECONTROLLER_DATA_PORT))
+      return false;
+    
+    // Initialize UDP socket to send robot status replies on port 3939
+    if(!externalGCReplySocket.setBlocking(false))
+      return false;
+    if(!externalGCReplySocket.setTarget("127.0.0.1", GAMECONTROLLER_RETURN_PORT))
+      return false;
+    
+    std::cout << "External GameController enabled on port " << GAMECONTROLLER_DATA_PORT << std::endl;
+    std::cout << "Robot status replies will be sent to port " << GAMECONTROLLER_RETURN_PORT << std::endl;
+    return true;
+  }
+  return true;
+}
+
+void GameController::sendRobotStatusToGC()
+{
+  if(!useExternalGC)
+    return;
+  
+  // Send status for each active robot (every ~500ms)
+  unsigned now = Time::getCurrentSystemTime();
+  if(now - lastRobotStatusSent < 500)
+    return;
+  lastRobotStatusSent = now;
+  
+  for(int team = 0; team < 2; ++team)
+  {
+    for(int player = 0; player < static_cast<int>(gameControllerData.playersPerTeam); ++player)
+    {
+      int robotIndex = team * MAX_NUM_PLAYERS + player;
+      Robot& r = robots[robotIndex];
+      
+      if(!r.simulatedRobot)
+        continue;
+      
+      RoboCup::RoboCupGameControlReturnData returnPacket;
+      returnPacket.playerNum = static_cast<uint8_t>(player + 1);
+      returnPacket.teamNum = gameControllerData.teams[team].teamNumber;
+      returnPacket.fallen = 0; // Simulated robots don't fall
+      
+      // Get robot pose
+      Pose2f pose;
+      r.simulatedRobot->getRobotPose(pose);
+      if(team == 0) // First team faces opposite direction
+        pose = Pose2f(pi) + pose;
+      
+      returnPacket.pose[0] = pose.translation.x();
+      returnPacket.pose[1] = pose.translation.y();
+      returnPacket.pose[2] = pose.rotation;
+      
+      // Ball info (simplified - just say we haven't seen it)
+      returnPacket.ballAge = -1.f;
+      returnPacket.ball[0] = 0.f;
+      returnPacket.ball[1] = 0.f;
+      
+      externalGCReplySocket.write(reinterpret_cast<const char*>(&returnPacket), sizeof(returnPacket));
+    }
+  }
+}
+
+void GameController::processExternalGameController()
+{
+  if(!useExternalGC)
+    return;
+
+  RoboCup::RoboCupGameControlData buffer;
+  unsigned from;
+  int size;
+  
+  while((size = externalGCSocket.read(reinterpret_cast<char*>(&buffer), sizeof(buffer), from)) > 0)
+  {
+    // Validate packet
+    if(size != sizeof(buffer))
+      continue;
+    if(std::memcmp(&buffer, GAMECONTROLLER_STRUCT_HEADER, 4) != 0)
+      continue;
+    if(buffer.version != GAMECONTROLLER_STRUCT_VERSION)
+      continue;
+    
+    // Check if one of our teams is in the packet
+    bool teamFound = false;
+    for(int i = 0; i < 2; ++i)
+    {
+      if(buffer.teams[i].teamNumber == gameControllerData.teams[0].teamNumber ||
+         buffer.teams[i].teamNumber == gameControllerData.teams[1].teamNumber)
+      {
+        teamFound = true;
+        break;
+      }
+    }
+    if(!teamFound)
+      continue;
+    
+    // Apply the external GameController state
+    std::cout << "Received external GC packet: state=" << static_cast<int>(buffer.state) 
+              << " setPlay=" << static_cast<int>(buffer.setPlay)
+              << " kickingTeam=" << static_cast<int>(buffer.kickingTeam) << std::endl;
+    
+    // Directly update game state from external GC (bypass internal state machine restrictions)
+    if(buffer.state != gameControllerData.state)
+    {
+      std::cout << "State change: " << static_cast<int>(gameControllerData.state) 
+                << " -> " << static_cast<int>(buffer.state) << std::endl;
+      gameControllerData.state = buffer.state;
+      timeWhenStateBegan = Time::getCurrentSystemTime();
+      
+      // Trigger whistle for playing state
+      if(buffer.state == STATE_PLAYING)
+      {
+        whistle.confidenceOfLastWhistleDetection = 2.f;
+        whistle.channelsUsedForWhistleDetection = 2;
+        whistle.lastTimeWhistleDetected = Time::getCurrentSystemTime();
+      }
+    }
+    
+    // Update kicking team
+    gameControllerData.kickingTeam = buffer.kickingTeam;
+    
+    // Update scores - map external team numbers to internal teams
+    for(int i = 0; i < 2; ++i)
+    {
+      for(int j = 0; j < 2; ++j)
+      {
+        if(buffer.teams[i].teamNumber == gameControllerData.teams[j].teamNumber)
+        {
+          gameControllerData.teams[j].score = buffer.teams[i].score;
+          // Also update player penalties
+          for(int p = 0; p < MAX_NUM_PLAYERS; ++p)
+          {
+            uint8_t oldPenalty = gameControllerData.teams[j].players[p].penalty;
+            uint8_t newPenalty = buffer.teams[i].players[p].penalty;
+            
+            if(oldPenalty != newPenalty)
+            {
+              std::cout << "Penalty change: Team " << static_cast<int>(gameControllerData.teams[j].teamNumber)
+                        << " Player " << (p + 1) << ": " << static_cast<int>(oldPenalty) 
+                        << " -> " << static_cast<int>(newPenalty) << std::endl;
+              
+              gameControllerData.teams[j].players[p].penalty = newPenalty;
+              
+              // Update robot's penalty time tracking
+              int robotIndex = j * MAX_NUM_PLAYERS + p;
+              if(newPenalty != PENALTY_NONE)
+              {
+                robots[robotIndex].timeWhenPenalized = Time::getCurrentSystemTime();
+              }
+            }
+            gameControllerData.teams[j].players[p].secsTillUnpenalised = buffer.teams[i].players[p].secsTillUnpenalised;
+          }
+        }
+      }
+    }
+    
+    // Update set play
+    gameControllerData.setPlay = buffer.setPlay;
+    
+    // Update game phase
+    if(buffer.gamePhase != gameControllerData.gamePhase)
+    {
+      gameControllerData.gamePhase = buffer.gamePhase;
+    }
+    
+    // Update first half
+    gameControllerData.firstHalf = buffer.firstHalf;
+    
+    lastExternalGCPacket = Time::getCurrentSystemTime();
   }
 }
 
@@ -461,6 +642,12 @@ bool GameController::checkIllegalPositionInSet(int robot) const
 
 void GameController::update()
 {
+  // Process external GameController messages first
+  processExternalGameController();
+  
+  // Send robot status to external GameController
+  sendRobotStatusToGC();
+
   for(int i = 0; i < numOfRobots; ++i)
   {
     Robot& r = robots[i];
@@ -621,10 +808,14 @@ void GameController::update()
 
     if(r.info->penalty != PENALTY_NONE)
     {
-      r.info->secsTillUnpenalised = static_cast<uint8_t>(std::max<int>((r.info->penalty == PENALTY_SPL_ILLEGAL_POSITION_IN_SET ? 15 : 45) - Time::getTimeSince(r.timeWhenPenalized) / 1000, 0));
+      // When using external GC, don't override penalty timing - let external GC control it
+      if(!useExternalGC)
+      {
+        r.info->secsTillUnpenalised = static_cast<uint8_t>(std::max<int>((r.info->penalty == PENALTY_SPL_ILLEGAL_POSITION_IN_SET ? 15 : 45) - Time::getTimeSince(r.timeWhenPenalized) / 1000, 0));
 
-      if(automatic & bit(unpenalize) && r.info->secsTillUnpenalised <= 0 && r.info->penalty != PENALTY_SPL_REQUEST_FOR_PICKUP && r.info->penalty != PENALTY_MANUAL && r.info->penalty != PENALTY_SUBSTITUTE)
-        r.info->penalty = PENALTY_NONE;
+        if(automatic & bit(unpenalize) && r.info->secsTillUnpenalised <= 0 && r.info->penalty != PENALTY_SPL_REQUEST_FOR_PICKUP && r.info->penalty != PENALTY_MANUAL && r.info->penalty != PENALTY_SUBSTITUTE)
+          r.info->penalty = PENALTY_NONE;
+      }
     }
     else
       r.info->secsTillUnpenalised = 0;

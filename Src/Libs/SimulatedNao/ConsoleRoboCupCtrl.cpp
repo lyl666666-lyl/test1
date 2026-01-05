@@ -7,6 +7,7 @@
  */
 
 #include "ConsoleRoboCupCtrl.h"
+#include "CommandServer.h"
 #include "Modules/Configuration/StaticInitialPoseProvider/StaticInitialPoseProvider.h"
 #include "SimulatedNao/BHToolBar.h"
 #include "SimulatedNao/ControllerRobot.h"
@@ -50,6 +51,10 @@ ConsoleRoboCupCtrl::ConsoleRoboCupCtrl(SimRobot::Application& application) :
   consoleView = new ConsoleView("Console", *this);
   addView(consoleView, nullptr, SimRobot::Flag::verticalTitleBar);
   addView(new ConsoleView("Console.Pad", *this, true), consoleView, SimRobot::Flag::verticalTitleBar);
+  
+  // Start command server for external GUI control
+  commandServer = std::make_unique<CommandServer>(this, 12345);
+  commandServer->start();
 }
 
 bool ConsoleRoboCupCtrl::compile()
@@ -125,6 +130,10 @@ ConsoleRoboCupCtrl::~ConsoleRoboCupCtrl()
 
 void ConsoleRoboCupCtrl::update()
 {
+  // Process commands from external GUI
+  if(commandServer)
+    commandServer->processCommands();
+
   {
     SYNC;
     for(const std::string& textMessage : textMessages)
@@ -491,6 +500,24 @@ bool ConsoleRoboCupCtrl::executeConsoleCommand(std::string command, RobotConsole
       check(gameController.gamePhasePenaltyshoot());
     else if(buffer == "gameNormal")
       check(gameController.gamePhaseNormal());
+    else if(buffer == "external")
+    {
+      stream >> buffer;
+      if(buffer == "on" || buffer == "true" || buffer == "1")
+      {
+        if(gameController.enableExternalGameController(true))
+          printLn("External GameController enabled (listening on UDP port 3838)");
+        else
+          printLn("Failed to enable external GameController");
+      }
+      else if(buffer == "off" || buffer == "false" || buffer == "0")
+      {
+        gameController.enableExternalGameController(false);
+        printLn("External GameController disabled");
+      }
+      else
+        printLn("Usage: gc external on|off");
+    }
     else
       printLn("Syntax Error");
   }

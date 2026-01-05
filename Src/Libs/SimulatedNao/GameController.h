@@ -11,6 +11,7 @@
 #include "Representations/Configuration/FieldDimensions.h"
 #include "Representations/Modeling/Whistle.h"
 #include "Tools/Communication/TeamMessageContainer.h"
+#include "Network/UdpComm.h"
 #include "Framework/Settings.h"
 #include "Math/Pose2f.h"
 #include "Streaming/Enum.h"
@@ -127,6 +128,13 @@ private:
   unsigned timeWhenLastRobotMoved = 0;
   unsigned timeWhenStateBegan = 0;
   unsigned timeWhenSetPlayBegan = 0;
+  
+  // External GameController UDP receiver
+  UdpComm externalGCSocket; /**< Socket to receive external GameController messages. */
+  UdpComm externalGCReplySocket; /**< Socket to send robot status replies. */
+  bool useExternalGC = false; /**< Whether to use external GameController. */
+  unsigned lastExternalGCPacket = 0; /**< Time when last external GC packet was received. */
+  unsigned lastRobotStatusSent = 0; /**< Time when last robot status was sent. */
   Robot robots[numOfRobots];
   int ballContacts[2];
   int testRuns = 0;
@@ -171,6 +179,25 @@ public:
 
   /** Load ball specification after the search path has been filled. */
   void loadBallSpecification();
+
+  /**
+   * Enable receiving from external GameController (e.g., GameController3).
+   * @param enable Whether to enable external GameController.
+   * @return true if socket was successfully initialized.
+   */
+  bool enableExternalGameController(bool enable);
+
+  /**
+   * Check and process messages from external GameController.
+   * Called from update().
+   */
+  void processExternalGameController();
+
+  /**
+   * Send robot status messages to external GameController.
+   * Called from update().
+   */
+  void sendRobotStatusToGC();
 
   /**
    * Each simulated robot must be registered.

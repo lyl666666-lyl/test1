@@ -913,6 +913,11 @@ GameState::State GameStateProvider::convertGameControllerDataToState(const GameC
     ASSERT(gameControllerData.setPlay == SET_PLAY_NONE);
     return GameState::timeout;
   }
+  else if(gameControllerData.gamePhase == GAME_PHASE_PAUSED)
+  {
+    // GAME_PHASE_PAUSED is a system-level pause (freeze) - treat it as timeout
+    return GameState::timeout;
+  }
   else if(gameControllerData.gamePhase == GAME_PHASE_PENALTYSHOOT)
   {
     ASSERT(gameControllerData.setPlay == SET_PLAY_NONE);
@@ -928,7 +933,7 @@ GameState::State GameStateProvider::convertGameControllerDataToState(const GameC
     else
       FAIL("Impossible game state.");
   }
-  ASSERT(gameControllerData.gamePhase == GAME_PHASE_NORMAL);
+  ASSERT(gameControllerData.gamePhase == GAME_PHASE_NORMAL || gameControllerData.gamePhase == GAME_PHASE_OVERTIME);
   if(gameControllerData.state == STATE_INITIAL)
   {
     ASSERT(gameControllerData.setPlay == SET_PLAY_NONE);

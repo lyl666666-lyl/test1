@@ -12,6 +12,9 @@
 #include "Streaming/InOut.h"
 #include <regex>
 #include <type_traits>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 void LoggingTools::writeSettings(Out& stream, const Settings& settings)
 {
@@ -64,7 +67,22 @@ std::string LoggingTools::createName(const std::string& headName, const std::str
                                      const std::string& location, const std::string& identifier, int playerNumber,
                                      const std::string& suffix)
 {
-  return headName + "_" + bodyName + "_" + scenario + "_" + location + "__" + identifier + "_" + std::to_string(playerNumber) +
+  // Get current time
+  std::time_t now = std::time(nullptr);
+  std::tm* localTime = std::localtime(&now);
+  
+  // Format timestamp as YYYYMMDD_HHMMSS
+  std::ostringstream timestamp;
+  timestamp << std::setfill('0')
+            << std::setw(4) << (localTime->tm_year + 1900)
+            << std::setw(2) << (localTime->tm_mon + 1)
+            << std::setw(2) << localTime->tm_mday
+            << "_"
+            << std::setw(2) << localTime->tm_hour
+            << std::setw(2) << localTime->tm_min
+            << std::setw(2) << localTime->tm_sec;
+  
+  return timestamp.str() + "_" + headName + "_" + bodyName + "_" + scenario + "_" + location + "__" + identifier + "_" + std::to_string(playerNumber) +
          (!suffix.empty() ? "_" + suffix : "");
 }
 

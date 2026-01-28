@@ -20,6 +20,7 @@
 #include "Platform/Time.h"
 #include "Streaming/Global.h"
 #include <algorithm>
+#include <sys/stat.h>
 
 //#define SITTING_TEST
 //#define SELF_TEST
@@ -68,6 +69,86 @@ TeamMessageHandler::TeamMessageHandler() :
 #else
   theTeamMessageChannel.start(Settings::getPortForTeam(Global::getSettings().teamNumber));
 #endif
+
+  // Initialize team communication log with timestamp
+  auto now = std::chrono::system_clock::now();
+  auto time = std::chrono::system_clock::to_time_t(now);
+  std::tm* tm = std::localtime(&time);
+  
+  // Create match folder with timestamp: YYYYMMDD_HHMMSS
+  std::stringstream matchFolder;
+  matchFolder << std::put_time(tm, "%Y%m%d_%H%M%S");
+  
+  std::string teamFolder = "Team" + std::to_string(Global::getSettings().teamNumber);
+  std::string logDir;
+  
+#ifdef TARGET_ROBOT
+  // On real robot, write to a shared location that can be accessed from dev machine
+  // Try to use NFS mount first, fallback to local if not available
+  std::string nfsLogDir = "/mnt/dev_logs/" + matchFolder.str() + "/" + teamFolder + "/";
+  std::string localLogDir = std::string(File::getBHDir()) + "/logs/" + matchFolder.str() + "/" + teamFolder + "/";
+  
+  // Check if NFS mount exists
+  struct stat st;
+  if(stat("/mnt/dev_logs", &st) == 0 && S_ISDIR(st.st_mode))
+  {
+    logDir = nfsLogDir;
+    OUTPUT_TEXT("Using NFS mounted log directory: " << logDir);
+  }
+  else
+  {
+    logDir = localLogDir;
+    OUTPUT_TEXT("NFS not available, using local log directory: " << logDir);
+  }
+#else
+  // In simulator, use Config/Sim_Logs directory
+  logDir = std::string(File::getBHDir()) + "/Config/Sim_Logs/" + matchFolder.str() + "/" + teamFolder + "/";
+#endif
+  
+  // Create directory if not exists (using standard library)
+  try
+  {
+    std::filesystem::create_directories(logDir);
+  }
+  catch(const std::exception& e)
+  {
+    OUTPUT_ERROR("Failed to create log directory: " << logDir << " - " << e.what());
+#ifdef TARGET_ROBOT
+    // Fallback to local directory
+    logDir = std::string(File::getBHDir()) + "/logs/" + matchFolder.str() + "/" + teamFolder + "/";
+    std::filesystem::create_directories(logDir);
+#endif
+  }
+  
+  std::stringstream logName;
+  logName << logDir << "team_comm_p" << Global::getSettings().playerNumber << ".txt";
+  teamCommLogFile.open(logName.str(), std::ios::out);
+  if(teamCommLogFile.is_open())
+  {
+    teamCommLogFile << "========================================\n";
+    teamCommLogFile << "团队通信日志\n";
+    teamCommLogFile << "比赛时间: " << std::put_time(tm, "%Y-%m-%d %H:%M:%S") << "\n";
+    teamCommLogFile << "队伍编号: " << Global::getSettings().teamNumber << "\n";
+    teamCommLogFile << "机器人编号: " << Global::getSettings().playerNumber << "\n";
+    teamCommLogFile << "机器人名称: " << Global::getSettings().bodyName << "\n";
+    teamCommLogFile << "日志路径: " << logName.str() << "\n";
+    teamCommLogFile << "========================================\n\n";
+    teamCommLogFile.flush();
+    OUTPUT_TEXT("TeamComm log file created: " << logName.str());
+    
+    // Generate visualization HTML for this team (only once per team)
+    std::string htmlPath = logDir + "view_logs.html";
+    std::ifstream checkHtml(htmlPath);
+    if(!checkHtml.good())
+    {
+      generateVisualizationHTML(logDir, teamFolder);
+      OUTPUT_TEXT("Generated visualization HTML: " << htmlPath);
+    }
+  }
+  else
+  {
+    OUTPUT_ERROR("Failed to create TeamComm log file: " << logName.str());
+  }
 }
 
 void TeamMessageHandler::update(BHumanMessageOutputGenerator& outputGenerator)
@@ -156,6 +237,25 @@ void TeamMessageHandler::update(BHumanMessageOutputGenerator& outputGenerator)
 
     // Plot length of message:
     PLOT("module:TeamMessageHandler:messageLength", outTeamMessage.length);
+    
+    // Log to file with full context (thread-safe)
+    if(teamCommLogFile.is_open())
+    {
+      std::lock_guard<std::mutex> lock(logFileMutex);
+      teamCommLogFile << "\n[发送] 时间=" << theFrameInfo.time << "ms\n";
+      teamCommLogFile << "  机器人: " << static_cast<int>(theGameState.playerNumber) << "号\n";
+      teamCommLogFile << "  位置: (" << static_cast<int>(theRobotPose.translation.x()) << ", " 
+                      << static_cast<int>(theRobotPose.translation.y()) << ") 朝向=" << theRobotPose.rotation << "\n";
+      teamCommLogFile << "  球: (" << static_cast<int>(theBallModel.estimate.position.x()) << ", " 
+                      << static_cast<int>(theBallModel.estimate.position.y()) << ") 可见度=" 
+                      << static_cast<int>(theBallModel.seenPercentage) << "%\n";
+      teamCommLogFile << "  角色: " << TypeRegistry::getEnumName(theStrategyStatus.role) << "\n";
+      teamCommLogFile << "  传球目标: " << theBehaviorStatus.passTarget << " | 行走目标: (" 
+                      << static_cast<int>(theBehaviorStatus.walkingTo.x()) << "," 
+                      << static_cast<int>(theBehaviorStatus.walkingTo.y()) << ")\n";
+      teamCommLogFile << "  消息预算剩余: " << ownModeledBudget << "\n";
+      teamCommLogFile.flush();
+    }
   };
 }
 
@@ -261,6 +361,25 @@ void TeamMessageHandler::update(ReceivedTeamMessages& receivedTeamMessages)
 
       receivedTeamMessages.messages.emplace_back();
       parseMessage(receivedTeamMessages.messages.back());
+      
+      // Log received message to file (thread-safe)
+      if(teamCommLogFile.is_open())
+      {
+        std::lock_guard<std::mutex> lock(logFileMutex);
+        const auto& msg = receivedTeamMessages.messages.back();
+        teamCommLogFile << "\n[接收] 时间=" << theFrameInfo.time << "ms 来自机器人" << static_cast<int>(msg.number) << "号\n";
+        teamCommLogFile << "  位置: (" << static_cast<int>(msg.theRobotPose.translation.x()) << ", " 
+                        << static_cast<int>(msg.theRobotPose.translation.y()) << ") 朝向=" << msg.theRobotPose.rotation << "\n";
+        teamCommLogFile << "  球: (" << static_cast<int>(msg.theBallModel.estimate.position.x()) << ", " 
+                        << static_cast<int>(msg.theBallModel.estimate.position.y()) << ") 可见度=" 
+                        << static_cast<int>(msg.theBallModel.seenPercentage) << "%\n";
+        teamCommLogFile << "  角色: " << TypeRegistry::getEnumName(msg.theStrategyStatus.role) << "\n";
+        teamCommLogFile << "  传球目标: " << msg.theBehaviorStatus.passTarget << " | 行走目标: (" 
+                        << static_cast<int>(msg.theBehaviorStatus.walkingTo.x()) << "," 
+                        << static_cast<int>(msg.theBehaviorStatus.walkingTo.y()) << ")\n";
+        teamCommLogFile.flush();
+      }
+      
       continue;
     }
 
@@ -630,4 +749,400 @@ bool TeamMessageHandler::teamBallOld() const
 bool TeamMessageHandler::indirectKickChanged() const
 {
   return theIndirectKick.lastKickTimestamp > lastSent.theIndirectKick.lastKickTimestamp && !theIndirectKick.allowDirectKick && lastSent.theIndirectKick.lastKickTimestamp < theIndirectKick.lastSetPlayTime; // lastSetPlayTime checks every GameState change
+}
+
+void TeamMessageHandler::generateVisualizationHTML(const std::string& teamDir, const std::string& teamFolder) const
+{
+  std::string htmlPath = teamDir + "view_logs.html";
+  std::ofstream htmlFile(htmlPath);
+  
+  if(!htmlFile.is_open())
+  {
+    OUTPUT_ERROR("Failed to create visualization HTML: " << htmlPath);
+    return;
+  }
+  
+  htmlFile << R"(<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>)" << teamFolder << R"( - 团队通信日志查看器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .controls {
+            padding: 25px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .control-group { margin-bottom: 15px; }
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-bar input, .filter-bar select {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .filter-bar input:focus, .filter-bar select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 25px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .stat-card .label { color: #6c757d; font-size: 0.9em; }
+        .content { padding: 25px; }
+        .log-entry {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .log-entry:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        .log-entry.send { border-left: 5px solid #28a745; }
+        .log-entry.receive { border-left: 5px solid #007bff; }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .log-type {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        .log-type.send { background: #28a745; color: white; }
+        .log-type.receive { background: #007bff; color: white; }
+        .log-time { color: #6c757d; font-size: 0.9em; }
+        .log-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .detail-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .detail-item .detail-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+        .detail-item .detail-value { color: #212529; font-size: 1em; }
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 )" << teamFolder << R"( 团队通信日志</h1>
+            <p>自动加载本队所有机器人日志</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>🔍 筛选条件</label>
+                <div class="filter-bar">
+                    <input type="text" id="searchInput" placeholder="搜索关键词...">
+                    <select id="typeFilter">
+                        <option value="all">全部类型</option>
+                        <option value="send">仅发送</option>
+                        <option value="receive">仅接收</option>
+                    </select>
+                    <select id="robotFilter">
+                        <option value="all">全部机器人</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="value" id="totalMessages">0</div>
+                <div class="label">总消息数</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="sendMessages">0</div>
+                <div class="label">发送消息</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="receiveMessages">0</div>
+                <div class="label">接收消息</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="robotCount">0</div>
+                <div class="label">机器人数量</div>
+            </div>
+        </div>
+        
+        <div class="content" id="content">
+            <div class="no-data">
+                <div style="font-size: 4em; margin-bottom: 20px;">⏳</div>
+                <h3>正在加载日志...</h3>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allLogs = [];
+        let filteredLogs = [];
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('typeFilter').addEventListener('change', applyFilters);
+        document.getElementById('robotFilter').addEventListener('change', applyFilters);
+
+        // Auto-load all log files in this directory
+        async function loadAllLogs() {
+            const logFiles = [
+                'team_comm_p1.txt',
+                'team_comm_p2.txt',
+                'team_comm_p3.txt',
+                'team_comm_p4.txt',
+                'team_comm_p5.txt'
+            ];
+            
+            for (const filename of logFiles) {
+                try {
+                    const response = await fetch(filename);
+                    if (response.ok) {
+                        const content = await response.text();
+                        parseLogs(content, filename);
+                    }
+                } catch (e) {
+                    console.log('Could not load ' + filename);
+                }
+            }
+            
+            updateRobotFilter();
+            applyFilters();
+            updateStats();
+        }
+
+        function parseLogs(content, filename) {
+            const lines = content.split('\n');
+            let currentLog = null;
+            
+            for (let line of lines) {
+                line = line.trim();
+                
+                if (line.startsWith('[发送]') || line.startsWith('[接收]')) {
+                    if (currentLog) {
+                        allLogs.push(currentLog);
+                    }
+                    
+                    const type = line.startsWith('[发送]') ? 'send' : 'receive';
+                    const timeMatch = line.match(/时间=(\d+)ms/);
+                    const robotMatch = line.match(/来自机器人(\d+)号/) || line.match(/机器人: (\d+)号/);
+                    
+                    currentLog = {
+                        type: type,
+                        time: timeMatch ? parseInt(timeMatch[1]) : 0,
+                        robot: robotMatch ? parseInt(robotMatch[1]) : null,
+                        filename: filename,
+                        details: {}
+                    };
+                } else if (currentLog && line) {
+                    if (line.includes('位置:')) {
+                        currentLog.details.position = line.replace('位置:', '').trim();
+                    } else if (line.includes('球:')) {
+                        currentLog.details.ball = line.replace('球:', '').trim();
+                    } else if (line.includes('角色:')) {
+                        currentLog.details.role = line.replace('角色:', '').trim();
+                    } else if (line.includes('传球目标:')) {
+                        currentLog.details.pass = line.replace('传球目标:', '').trim();
+                    } else if (line.includes('消息预算剩余:')) {
+                        currentLog.details.budget = line.replace('消息预算剩余:', '').trim();
+                    }
+                }
+            }
+            
+            if (currentLog) {
+                allLogs.push(currentLog);
+            }
+        }
+
+        function updateRobotFilter() {
+            const robots = new Set();
+            allLogs.forEach(log => {
+                if (log.robot) robots.add(log.robot);
+            });
+            
+            const select = document.getElementById('robotFilter');
+            select.innerHTML = '<option value="all">全部机器人</option>';
+            
+            Array.from(robots).sort((a, b) => a - b).forEach(robot => {
+                const option = document.createElement('option');
+                option.value = robot;
+                option.textContent = `机器人 ${robot} 号`;
+                select.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            const robotFilter = document.getElementById('robotFilter').value;
+            
+            filteredLogs = allLogs.filter(log => {
+                if (typeFilter !== 'all' && log.type !== typeFilter) return false;
+                if (robotFilter !== 'all' && log.robot !== parseInt(robotFilter)) return false;
+                if (searchTerm) {
+                    const searchableText = JSON.stringify(log).toLowerCase();
+                    if (!searchableText.includes(searchTerm)) return false;
+                }
+                return true;
+            });
+            
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const content = document.getElementById('content');
+            
+            if (filteredLogs.length === 0) {
+                content.innerHTML = `
+                    <div class="no-data">
+                        <div style="font-size: 4em; margin-bottom: 20px;">🔍</div>
+                        <h3>没有找到匹配的日志</h3>
+                        <p style="margin-top: 10px;">尝试调整筛选条件</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            content.innerHTML = filteredLogs.map(log => `
+                <div class="log-entry ${log.type}">
+                    <div class="log-header">
+                        <span class="log-type ${log.type}">
+                            ${log.type === 'send' ? '📤 发送' : '📥 接收'}
+                            ${log.robot ? ` - 机器人 ${log.robot} 号` : ''}
+                        </span>
+                        <span class="log-time">⏱️ ${log.time}ms</span>
+                    </div>
+                    <div class="log-details">
+                        ${log.details.position ? `
+                            <div class="detail-item">
+                                <div class="detail-label">📍 位置</div>
+                                <div class="detail-value">${log.details.position}</div>
+                            </div>
+                        ` : ''}
+                        ${log.details.ball ? `
+                            <div class="detail-item">
+                                <div class="detail-label">⚽ 球位置</div>
+                                <div class="detail-value">${log.details.ball}</div>
+                            </div>
+                        ` : ''}
+                        ${log.details.role ? `
+                            <div class="detail-item">
+                                <div class="detail-label">👤 角色</div>
+                                <div class="detail-value">${log.details.role}</div>
+                            </div>
+                        ` : ''}
+                        ${log.details.pass ? `
+                            <div class="detail-item">
+                                <div class="detail-label">🎯 传球/行走</div>
+                                <div class="detail-value">${log.details.pass}</div>
+                            </div>
+                        ` : ''}
+                        ${log.details.budget ? `
+                            <div class="detail-item">
+                                <div class="detail-label">💰 消息预算</div>
+                                <div class="detail-value">${log.details.budget}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats() {
+            const sendCount = allLogs.filter(log => log.type === 'send').length;
+            const receiveCount = allLogs.filter(log => log.type === 'receive').length;
+            const robots = new Set(allLogs.map(log => log.robot).filter(r => r));
+            
+            document.getElementById('totalMessages').textContent = allLogs.length;
+            document.getElementById('sendMessages').textContent = sendCount;
+            document.getElementById('receiveMessages').textContent = receiveCount;
+            document.getElementById('robotCount').textContent = robots.size;
+        }
+
+        // Start loading logs
+        loadAllLogs();
+    </script>
+</body>
+</html>
+)";
+  
+  htmlFile.close();
+  OUTPUT_TEXT("Successfully generated visualization HTML at: " << htmlPath);
 }

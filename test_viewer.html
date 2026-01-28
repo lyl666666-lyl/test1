@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>测试</title>
+</head>
+<body>
+    <h1>测试日志解析</h1>
+    <div id="output"></div>
+    
+    <script>
+        const embeddedLogs = [{"filename": "test.txt", "content": "[发送] 时间=126133ms\n  机器人: 1号\n  位置: (-3963, 2778) 朝向=-1.4912\n\n[接收] 时间=126157ms 来自机器人5号\n  位置: (-660, -2840) 朝向=1.63856"}];
+        
+        let allLogs = [];
+        
+        function parseLogs(content, filename) {
+            console.log("开始解析:", filename);
+            console.log("内容长度:", content.length);
+            
+            const lines = content.split('\n');
+            console.log("行数:", lines.length);
+            
+            let currentLog = null;
+            for (let line of lines) {
+                line = line.trim();
+                console.log("处理行:", line);
+                
+                if (line.startsWith('[发送]') || line.startsWith('[接收]')) {
+                    if (currentLog) {
+                        allLogs.push(currentLog);
+                        console.log("添加日志:", currentLog);
+                    }
+                    
+                    const type = line.startsWith('[发送]') ? 'send' : 'receive';
+                    const timeMatch = line.match(/时间=(\d+)ms/);
+                    const robotMatch = line.match(/来自机器人(\d+)号/) || line.match(/机器人: (\d+)号/);
+                    
+                    currentLog = {
+                        type: type,
+                        time: timeMatch ? parseInt(timeMatch[1]) : 0,
+                        robot: robotMatch ? parseInt(robotMatch[1]) : null,
+                        filename: filename,
+                        details: {}
+                    };
+                    console.log("创建新日志:", currentLog);
+                }
+            }
+            
+            if (currentLog) {
+                allLogs.push(currentLog);
+                console.log("添加最后一条日志:", currentLog);
+            }
+            
+            console.log("解析完成，总日志数:", allLogs.length);
+        }
+        
+        // 执行解析
+        embeddedLogs.forEach(logFile => {
+            parseLogs(logFile.content, logFile.filename);
+        });
+        
+        // 显示结果
+        document.getElementById('output').innerHTML = `
+            <p>解析完成！</p>
+            <p>总日志数: ${allLogs.length}</p>
+            <pre>${JSON.stringify(allLogs, null, 2)}</pre>
+        `;
+    </script>
+</body>
+</html>

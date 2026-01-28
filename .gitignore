@@ -9,6 +9,12 @@
 !/.vscode/cspell.json
 !/.vscode/noArm.h
 !/.vscode/noX86.h
+
+# 日志文件和临时文件
+*.log
+*.pid
+.processed_matches
+team_comm.log
 *~
 \#*\#
 .\#
@@ -28,6 +34,12 @@ Thumbs.db
 /Config/Images
 /Config/Scenes/Includes/connect.con
 /Config/Scenes/Includes/replay.con
+/Config/Scenes/MUJOCO_LOG.TXT
+
+# 日志目录（不提交实际日志数据）
+/Config/Sim_Logs/
+/Config/Real_Logs/
+
 /Make/Hooks/gitpath
 !/Make/Linux/.idea
 /Make/Linux/.idea/*

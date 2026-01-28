@@ -33,7 +33,10 @@
 #include "Framework/Module.h"
 #include "Tools/Communication/GameControllerRBS.h"
 #include "Tools/Communication/CompressedTeamCommunicationStreams.h"
+#include <filesystem>
+#include <fstream>
 #include <map>
+#include <mutex>
 
 MODULE(TeamMessageHandler,
 {,
@@ -195,6 +198,10 @@ private:
   // output stuff
   unsigned timeWhenLastSent = 0; /**< Last time we send a message. */
   unsigned timeWhenLastTeamSent = 0; /** Last time the team send a message. */
+  
+  // Team communication log file
+  std::ofstream teamCommLogFile;
+  std::mutex logFileMutex; /**< Mutex for thread-safe file writing */
 
   void update(BHumanMessageOutputGenerator& outputGenerator) override;
   bool writeMessage(BHumanMessageOutputGenerator& outputGenerator, TeamMessageChannel::Container* const m);
@@ -380,4 +387,7 @@ private:
 
   /** Compute a preview of the message budget based on the own received team messages. */
   void handleBudgetPreview(ReceivedTeamMessages& receivedTeamMessages);
+  
+  /** Generate visualization HTML file for the team logs. */
+  void generateVisualizationHTML(const std::string& teamDir, const std::string& teamFolder) const;
 };

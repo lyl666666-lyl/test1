@@ -21,12 +21,12 @@
  */
 option((SkillBehaviorControl) HandleRefereeSignal,
        defs((float)(2500.f) upperImageBorderAtHeight, /**< The height to look at (in mm). */
-            (float)(2000.f) upperImageBorderAtHeightStandby, /**< The height to look at in standby (in mm). */
+            (float)(2400.f) upperImageBorderAtHeightStandby, /**< The height to look at in standby (in mm). */
             (float)(515.f) assumedCameraHeight, /**< The assumed height of the camera above ground (in mm). */
-            (Rangef)({1500.f, 8000.f}) distanceRange, /**< The distance range for this option to become active during kick-in. */
-            (Rangea)({15_deg, 165_deg}) bearingRange, /**< The bearing range to the referee for this option to become active. */
-            (int)(12000) kickInWaitTime, /**< How long to unsuccessfully look at referee during kick-in. */
-            (Angle)(60_deg) maxHeadTurn, /**< Maximum head rotation before the body has to be turned. */
+            (Rangef)({1200.f, 9000.f}) distanceRange, /**< The distance range for this option to become active during kick-in. */
+            (Rangea)({10_deg, 170_deg}) bearingRange, /**< The bearing range to the referee for this option to become active. */
+            (int)(15000) kickInWaitTime, /**< How long to unsuccessfully look at referee during kick-in. */
+            (Angle)(70_deg) maxHeadTurn, /**< Maximum head rotation before the body has to be turned. */
             (Angle)(2_deg) turnTolerance)) /**< Accepted tolerance when reaching the required body rotation. */
 {
   const Vector2f refereeOnField(theFieldDimensions.xPosHalfwayLine,

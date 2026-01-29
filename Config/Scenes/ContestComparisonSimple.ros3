@@ -1,0 +1,97 @@
+<Simulation>
+
+  <Include href="Includes/NaoV6H25.rsi3"/>
+  <Include href="Includes/Ball2016SPL.rsi3"/>
+  <Include href="Includes/Field2020SPL.rsi3"/>
+
+  <Scene name="ContestComparisonSimple" controller="SimulatedNao" stepLength="0.012" color="rgb(65%, 65%, 70%)">
+    <PointLight z="9m" ambientColor="rgb(50%, 50%, 50%)"/>
+
+    <!-- Simplified Contest Comparison - Based on working 5vs5 -->
+    
+    <Compound name="teams">
+      <Compound name="B-Human">
+        <Compound name="5"/>
+        <Compound name="black"/>
+        <Compound name="purple"/>
+      </Compound>
+      <Compound name="B-Team">
+        <Compound name="70"/>
+        <Compound name="red"/>
+        <Compound name="blue"/>
+      </Compound>
+    </Compound>
+
+    <Compound name="robots">
+      <!-- B-Human Team (Right side) - Will use Ball Contest Support -->
+      <Body ref="Nao" name="robot1">
+        <Translation x="4" y="0" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="purple"/>
+      </Body>
+      <Body ref="Nao" name="robot2">
+        <Translation x="0.5" y="-0.5" z="320mm"/>
+        <Rotation z="-45degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      <Body ref="Nao" name="robot3">
+        <Translation x="1.5" y="-1.5" z="320mm"/>
+        <Rotation z="-60degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      <Body ref="Nao" name="robot4">
+        <Translation x="2.5" y="-1" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      <Body ref="Nao" name="robot5">
+        <Translation x="2.5" y="1" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+
+      <!-- B-Team (Left side) - Will use traditional strategy -->
+      <Body ref="Nao" name="robot21">
+        <Translation x="-4" y="0" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="blue"/>
+      </Body>
+      <Body ref="Nao" name="robot22">
+        <Translation x="-0.5" y="0.5" z="320mm"/>
+        <Rotation z="135degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      <Body ref="Nao" name="robot23">
+        <Translation x="-1.5" y="1.5" z="320mm"/>
+        <Rotation z="120degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      <Body ref="Nao" name="robot24">
+        <Translation x="-2.5" y="1" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      <Body ref="Nao" name="robot25">
+        <Translation x="-2.5" y="-1" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+    </Compound>
+
+    <!-- Ball in center for contest -->
+    <Compound name="balls">
+      <Body ref="ball">
+        <Translation x="0" y="0" z="32.5mm"/>
+      </Body>
+    </Compound>
+
+    <Compound ref="field"/>
+    <Compound name="extras"/>
+
+    <Compound name="scenarios">
+      <Compound name="5vs5"/>
+    </Compound>
+
+  </Scene>
+
+</Simulation>

@@ -1,0 +1,27 @@
+<Simulation>
+
+  <Include href="Includes/NaoV6H25.rsi3"/>
+  <Include href="Includes/5vs5.rsi3"/>
+  <Include href="Includes/Ball2016SPL.rsi3"/>
+  <Include href="Includes/Field2020SPL.rsi3"/>
+
+  <Scene name="ContestComparison" controller="SimulatedNao" stepLength="0.012" color="rgb(65%, 65%, 70%)">
+    <PointLight z="9m" ambientColor="rgb(50%, 50%, 50%)"/>
+
+    <!-- Use the standard 5vs5 setup -->
+    <Compound ref="teams"/>
+    <Compound ref="robots"/>
+    <Compound name="extras"/>
+
+    <!-- Ball positioned for contest -->
+    <Compound name="balls">
+      <Body ref="ball">
+        <Translation x="0" y="0" z="32.5mm"/>
+      </Body>
+    </Compound>
+
+    <Compound ref="field"/>
+
+  </Scene>
+
+</Simulation>

@@ -136,14 +136,14 @@ TeamMessageHandler::TeamMessageHandler() :
     teamCommLogFile.flush();
     OUTPUT_TEXT("TeamComm log file created: " << logName.str());
     
-    // Generate visualization HTML for this team (only once per team)
-    std::string htmlPath = logDir + "view_logs.html";
-    std::ifstream checkHtml(htmlPath);
-    if(!checkHtml.good())
-    {
-      generateVisualizationHTML(logDir, teamFolder);
-      OUTPUT_TEXT("Generated visualization HTML: " << htmlPath);
-    }
+    // HTML visualization generation disabled
+    // std::string htmlPath = logDir + "view_logs.html";
+    // std::ifstream checkHtml(htmlPath);
+    // if(!checkHtml.good())
+    // {
+    //   generateVisualizationHTML(logDir, teamFolder);
+    //   OUTPUT_TEXT("Generated visualization HTML: " << htmlPath);
+    // }
   }
   else
   {
@@ -253,6 +253,11 @@ void TeamMessageHandler::update(BHumanMessageOutputGenerator& outputGenerator)
       teamCommLogFile << "  传球目标: " << theBehaviorStatus.passTarget << " | 行走目标: (" 
                       << static_cast<int>(theBehaviorStatus.walkingTo.x()) << "," 
                       << static_cast<int>(theBehaviorStatus.walkingTo.y()) << ")\n";
+      teamCommLogFile << "  机器人状态: " << TypeRegistry::getEnumName(theFallDownState.state);
+      if(theFallDownState.direction != FallDownState::none)
+        teamCommLogFile << " (方向: " << TypeRegistry::getEnumName(theFallDownState.direction) << ")";
+      teamCommLogFile << "\n";
+      teamCommLogFile << "  裁判手势: " << TypeRegistry::getEnumName(theRefereeSignal.signal) << "\n";
       teamCommLogFile << "  消息预算剩余: " << ownModeledBudget << "\n";
       teamCommLogFile.flush();
     }
@@ -377,6 +382,8 @@ void TeamMessageHandler::update(ReceivedTeamMessages& receivedTeamMessages)
         teamCommLogFile << "  传球目标: " << msg.theBehaviorStatus.passTarget << " | 行走目标: (" 
                         << static_cast<int>(msg.theBehaviorStatus.walkingTo.x()) << "," 
                         << static_cast<int>(msg.theBehaviorStatus.walkingTo.y()) << ")\n";
+        teamCommLogFile << "  机器人状态: " << (msg.theRobotStatus.isUpright ? "站立" : "倒地") << "\n";
+        teamCommLogFile << "  裁判手势: " << TypeRegistry::getEnumName(msg.theRefereeSignal.signal) << "\n";
         teamCommLogFile.flush();
       }
       

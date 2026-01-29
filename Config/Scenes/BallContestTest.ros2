@@ -1,0 +1,113 @@
+<Simulation>
+
+  <Include href="Includes/NaoV6H25.rsi3"/>
+  <Include href="Includes/Ball2016SPL.rsi3"/>
+  <Include href="Includes/Field2020SPL.rsi3"/>
+
+  <Scene name="BallContestTest" controller="SimulatedNao" stepLength="0.012" color="rgb(65%, 65%, 70%)">
+    <PointLight z="9m" ambientColor="rgb(50%, 50%, 50%)"/>
+
+    <!-- Ball Contest Test Scenario -->
+    <!-- 争球测试场景：两个球员争球，其他球员需要提供支援 -->
+    
+    <Compound name="teams">
+      <Compound name="B-Human">
+        <Compound name="5"/>
+        <Compound name="black"/>
+        <Compound name="purple"/>
+      </Compound>
+      <Compound name="B-Team">
+        <Compound name="70"/>
+        <Compound name="red"/>
+        <Compound name="blue"/>
+      </Compound>
+    </Compound>
+
+    <Compound name="robots">
+      <!-- B-Human Team (Right side of field) -->
+      <!-- Robot 1: Goalkeeper -->
+      <Body ref="Nao" name="robot1">
+        <Translation x="4" y="0" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="purple"/>
+      </Body>
+      
+      <!-- Robot 2: Contestant (争球球员) -->
+      <Body ref="Nao" name="robot2">
+        <Translation x="0.5" y="-0.2" z="320mm"/>
+        <Rotation z="-45degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      
+      <!-- Robot 3: Potential Support (潜在支援球员) -->
+      <Body ref="Nao" name="robot3">
+        <Translation x="1" y="-1.5" z="320mm"/>
+        <Rotation z="-60degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      
+      <!-- Robot 4: Defender (防守球员) -->
+      <Body ref="Nao" name="robot4">
+        <Translation x="2" y="-0.8" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      
+      <!-- Robot 5: Midfielder (中场球员) -->
+      <Body ref="Nao" name="robot5">
+        <Translation x="1.5" y="0" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+
+      <!-- Opponent Team (Red/Blue) - Left side of field -->
+      <!-- Opponent 1: Goalkeeper -->
+      <Body ref="Nao" name="robot21">
+        <Translation x="-4" y="0" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="blue"/>
+      </Body>
+      
+      <!-- Opponent 2: Contestant (对手争球球员) -->
+      <Body ref="Nao" name="robot22">
+        <Translation x="-0.6" y="0.1" z="320mm"/>
+        <Rotation z="135degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      
+      <!-- Opponent 3: Support -->
+      <Body ref="Nao" name="robot23">
+        <Translation x="-1" y="1.3" z="320mm"/>
+        <Rotation z="120degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      
+      <!-- Opponent 4: Defender -->
+      <Body ref="Nao" name="robot24">
+        <Translation x="-2" y="0.8" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      
+      <!-- Opponent 5: Midfielder -->
+      <Body ref="Nao" name="robot25">
+        <Translation x="-1.5" y="0" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+    </Compound>
+
+    <!-- Ball positioned for contest scenario -->
+    <!-- 球的位置设置为争球场景 -->
+    <Compound name="balls">
+      <Body ref="ball" name="ball">
+        <Translation x="0" y="0" z="32.5mm"/>
+      </Body>
+    </Compound>
+
+    <Compound ref="field"/>
+    <Compound name="extras"/>
+
+  </Scene>
+
+</Simulation>

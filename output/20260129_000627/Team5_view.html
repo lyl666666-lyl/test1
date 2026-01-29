@@ -1,0 +1,3924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team5 - 20260129_000627 | SimRobot 可视化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        select, button {
+            padding: 10px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        select {
+            background: white;
+        }
+        
+        select:hover {
+            border-color: #667eea;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .field-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #field {
+            background: #2d5016;
+            border: 4px solid white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .info-value {
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .robot-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .robot-item {
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .robot-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .robot-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .timeline {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .timeline-bar {
+            width: 100%;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .timeline-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            transition: width 0.1s;
+        }
+        
+        .timeline-marker {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 1200px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Team5</h1>
+            <p>比赛 ID: 20260129_000627</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>选择机器人:</label>
+                <select id="robotSelect"></select>
+            </div>
+            <div class="control-group">
+                <button id="playBtn">▶️ 播放</button>
+                <button id="pauseBtn">⏸️ 暂停</button>
+                <button id="resetBtn">🔄 重置</button>
+            </div>
+            <div class="control-group">
+                <label>播放速度:</label>
+                <select id="speedSelect">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                    <option value="5">5x</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="field-container">
+                <canvas id="field" width="800" height="600"></canvas>
+                <div class="timeline">
+                    <div class="timeline-bar" id="timelineBar">
+                        <div class="timeline-progress" id="timelineProgress"></div>
+                        <div class="timeline-marker" id="timelineMarker"></div>
+                    </div>
+                    <div class="stats">
+                        <div class="stat-box">
+                            <div class="stat-value" id="currentTime">0</div>
+                            <div class="stat-label">当前时间 (ms)</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="messageCount">0</div>
+                            <div class="stat-label">消息数量</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="info-card">
+                    <h3>📋 机器人列表</h3>
+                    <div class="robot-list" id="robotList"></div>
+                </div>
+                
+                <div class="info-card">
+                    <h3>📊 当前状态</h3>
+                    <div id="currentStatus">
+                        <div class="info-row">
+                            <span class="info-label">位置:</span>
+                            <span class="info-value" id="posInfo">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">朝向:</span>
+                            <span class="info-value" id="orientInfo">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">球位置:</span>
+                            <span class="info-value" id="ballInfo">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">角色:</span>
+                            <span class="info-value" id="roleInfo">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">可见度:</span>
+                            <span class="info-value" id="visInfo">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 数据注入点 - Python 脚本会将解析后的数据替换到这里
+        const DATA = {
+  "match_id": "20260129_000627",
+  "team": {
+    "team_name": "Team5",
+    "robots": [
+      {
+        "robot_id": "1",
+        "robot_name": "SimulatedNao",
+        "team_number": "5",
+        "match_time": "2026-01-29 00:06:27",
+        "log_file": "team_comm_p1.txt",
+        "messages": [
+          {
+            "type": "send",
+            "timestamp": 137280,
+            "robot_id": 1,
+            "position": {
+              "x": -4037.0,
+              "y": 6.0
+            },
+            "orientation": 0.019201,
+            "ball": {
+              "x": 4036.0,
+              "y": -83.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1199
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 4,
+            "position": {
+              "x": -350.0,
+              "y": 0.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 356.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1490.0
+            },
+            "orientation": 0.751518,
+            "ball": {
+              "x": 1244.0,
+              "y": 869.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 2,
+            "position": {
+              "x": -3280.0,
+              "y": -350.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 3295.0,
+              "y": -118.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 138396,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 139404,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1460.0
+            },
+            "orientation": 1.2936,
+            "ball": {
+              "x": 1494.0,
+              "y": 106.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 140592,
+            "from_robot_id": 4,
+            "position": {
+              "x": -190.0,
+              "y": 90.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 193.0,
+              "y": 81.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": 43.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 141768,
+            "from_robot_id": 4,
+            "position": {
+              "x": -110.0,
+              "y": 70.0
+            },
+            "orientation": -0.923998,
+            "ball": {
+              "x": 256.0,
+              "y": 56.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1344.0,
+              "y": -1069.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 142548,
+            "from_robot_id": 5,
+            "position": {
+              "x": -250.0,
+              "y": -1410.0
+            },
+            "orientation": 0.874718,
+            "ball": {
+              "x": 1156.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 794.0,
+              "y": -2257.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144228,
+            "from_robot_id": 4,
+            "position": {
+              "x": -150.0,
+              "y": 110.0
+            },
+            "orientation": -1.73712,
+            "ball": {
+              "x": 2019.0,
+              "y": 1744.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 268.0,
+              "y": -1919.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 144372,
+            "robot_id": 1,
+            "position": {
+              "x": -4046.0,
+              "y": -141.0
+            },
+            "orientation": -0.232231,
+            "ball": {
+              "x": 5986.0,
+              "y": -182.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1188
+          },
+          {
+            "type": "receive",
+            "timestamp": 144384,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4183.0,
+              "y": -1419.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 146712,
+            "from_robot_id": 5,
+            "position": {
+              "x": 820.0,
+              "y": -1540.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 1156.0,
+              "y": -343.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 1156.0,
+              "y": -343.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 148008,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1240.0,
+              "y": -1610.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 681.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 468.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 149472,
+            "robot_id": 1,
+            "position": {
+              "x": -4032.0,
+              "y": -143.0
+            },
+            "orientation": -0.234133,
+            "ball": {
+              "x": 6181.0,
+              "y": -213.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1184
+          },
+          {
+            "type": "receive",
+            "timestamp": 149484,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1000.0,
+              "y": 1150.0
+            },
+            "orientation": -1.26896,
+            "ball": {
+              "x": 3232.0,
+              "y": 18.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": -6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 150612,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1770.0,
+              "y": -1900.0
+            },
+            "orientation": -0.0862398,
+            "ball": {
+              "x": -231.0,
+              "y": 519.0
+            },
+            "ball_visibility": "0%",
+            "role": "midfielder",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -2682.0,
+              "y": -18.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 151740,
+            "from_robot_id": 3,
+            "position": {
+              "x": 800.0,
+              "y": 1040.0
+            },
+            "orientation": -1.2936,
+            "ball": {
+              "x": 1244.0,
+              "y": 131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 68.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 152832,
+            "from_robot_id": 4,
+            "position": {
+              "x": -610.0,
+              "y": 240.0
+            },
+            "orientation": -0.874718,
+            "ball": {
+              "x": 769.0,
+              "y": 1344.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1994.0,
+              "y": -1682.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 153612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 730.0,
+              "y": 760.0
+            },
+            "orientation": -1.02256,
+            "ball": {
+              "x": 193.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 256.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 154896,
+            "from_robot_id": 4,
+            "position": {
+              "x": -800.0,
+              "y": 330.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1131.0,
+              "y": 1244.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1982.0,
+              "y": -1394.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 155604,
+            "from_robot_id": 3,
+            "position": {
+              "x": 770.0,
+              "y": 450.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 331.0,
+              "y": -131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 2394.0,
+              "y": -631.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 156756,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1580.0,
+              "y": -1380.0
+            },
+            "orientation": 2.59951,
+            "ball": {
+              "x": 1219.0,
+              "y": -619.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -894.0,
+              "y": -719.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 158568,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1640.0,
+              "y": -1100.0
+            },
+            "orientation": 2.67343,
+            "ball": {
+              "x": 569.0,
+              "y": -443.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1069.0,
+              "y": -368.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 159612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1060.0,
+              "y": 30.0
+            },
+            "orientation": -0.11088,
+            "ball": {
+              "x": 406.0,
+              "y": -431.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 193.0,
+              "y": -431.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 160608,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1460.0,
+              "y": -980.0
+            },
+            "orientation": 2.50095,
+            "ball": {
+              "x": 156.0,
+              "y": -493.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1306.0,
+              "y": -544.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 161916,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1550.0,
+              "y": -910.0
+            },
+            "orientation": 1.49072,
+            "ball": {
+              "x": 544.0,
+              "y": -43.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -343.0,
+              "y": -1369.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 162948,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1260.0,
+              "y": -90.0
+            },
+            "orientation": 0.0369599,
+            "ball": {
+              "x": 381.0,
+              "y": -256.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 406.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 164496,
+            "robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 62.0
+            },
+            "orientation": 0.0720644,
+            "ball": {
+              "x": 5709.0,
+              "y": -825.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1170
+          },
+          {
+            "type": "receive",
+            "timestamp": 164508,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4145.0,
+              "y": -68.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          }
+        ]
+      },
+      {
+        "robot_id": "2",
+        "robot_name": "SimulatedNao",
+        "team_number": "5",
+        "match_time": "2026-01-29 00:06:27",
+        "log_file": "team_comm_p2.txt",
+        "messages": [
+          {
+            "type": "send",
+            "timestamp": 137280,
+            "robot_id": 2,
+            "position": {
+              "x": -3284.0,
+              "y": -354.0
+            },
+            "orientation": 0.14528,
+            "ball": {
+              "x": 3301.0,
+              "y": -124.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1199
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 10.0
+            },
+            "orientation": 0.01232,
+            "ball": {
+              "x": 4033.0,
+              "y": -81.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 4,
+            "position": {
+              "x": -350.0,
+              "y": 0.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 356.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1490.0
+            },
+            "orientation": 0.751518,
+            "ball": {
+              "x": 1244.0,
+              "y": 869.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 138396,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 139404,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1460.0
+            },
+            "orientation": 1.2936,
+            "ball": {
+              "x": 1494.0,
+              "y": 106.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 140592,
+            "from_robot_id": 4,
+            "position": {
+              "x": -190.0,
+              "y": 90.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 193.0,
+              "y": 81.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": 43.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 141768,
+            "from_robot_id": 4,
+            "position": {
+              "x": -110.0,
+              "y": 70.0
+            },
+            "orientation": -0.923998,
+            "ball": {
+              "x": 256.0,
+              "y": 56.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1344.0,
+              "y": -1069.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 142548,
+            "from_robot_id": 5,
+            "position": {
+              "x": -250.0,
+              "y": -1410.0
+            },
+            "orientation": 0.874718,
+            "ball": {
+              "x": 1156.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 794.0,
+              "y": -2257.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144228,
+            "from_robot_id": 4,
+            "position": {
+              "x": -150.0,
+              "y": 110.0
+            },
+            "orientation": -1.73712,
+            "ball": {
+              "x": 2019.0,
+              "y": 1744.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 268.0,
+              "y": -1919.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 144372,
+            "robot_id": 2,
+            "position": {
+              "x": -2425.0,
+              "y": -212.0
+            },
+            "orientation": -0.0166745,
+            "ball": {
+              "x": 4185.0,
+              "y": -1414.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1188
+          },
+          {
+            "type": "receive",
+            "timestamp": 144384,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4050.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 5984.0,
+              "y": -181.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 146700,
+            "from_robot_id": 5,
+            "position": {
+              "x": 820.0,
+              "y": -1540.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 1156.0,
+              "y": -343.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 1156.0,
+              "y": -343.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 148020,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1240.0,
+              "y": -1610.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 681.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 468.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 149484,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1000.0,
+              "y": 1150.0
+            },
+            "orientation": -1.26896,
+            "ball": {
+              "x": 3232.0,
+              "y": 18.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": -6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 149484,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4030.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 6184.0,
+              "y": -218.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 150588,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1770.0,
+              "y": -1900.0
+            },
+            "orientation": -0.0862398,
+            "ball": {
+              "x": -231.0,
+              "y": 519.0
+            },
+            "ball_visibility": "0%",
+            "role": "midfielder",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -2682.0,
+              "y": -18.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 151740,
+            "from_robot_id": 3,
+            "position": {
+              "x": 800.0,
+              "y": 1040.0
+            },
+            "orientation": -1.2936,
+            "ball": {
+              "x": 1244.0,
+              "y": 131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 68.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 152832,
+            "from_robot_id": 4,
+            "position": {
+              "x": -610.0,
+              "y": 240.0
+            },
+            "orientation": -0.874718,
+            "ball": {
+              "x": 769.0,
+              "y": 1344.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1994.0,
+              "y": -1682.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 153612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 730.0,
+              "y": 760.0
+            },
+            "orientation": -1.02256,
+            "ball": {
+              "x": 193.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 256.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 154872,
+            "from_robot_id": 4,
+            "position": {
+              "x": -800.0,
+              "y": 330.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1131.0,
+              "y": 1244.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1982.0,
+              "y": -1394.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 155604,
+            "from_robot_id": 3,
+            "position": {
+              "x": 770.0,
+              "y": 450.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 331.0,
+              "y": -131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 2394.0,
+              "y": -631.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 156756,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1580.0,
+              "y": -1380.0
+            },
+            "orientation": 2.59951,
+            "ball": {
+              "x": 1219.0,
+              "y": -619.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -894.0,
+              "y": -719.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 158568,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1640.0,
+              "y": -1100.0
+            },
+            "orientation": 2.67343,
+            "ball": {
+              "x": 569.0,
+              "y": -443.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1069.0,
+              "y": -368.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 159612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1060.0,
+              "y": 30.0
+            },
+            "orientation": -0.11088,
+            "ball": {
+              "x": 406.0,
+              "y": -431.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 193.0,
+              "y": -431.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 160584,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1460.0,
+              "y": -980.0
+            },
+            "orientation": 2.50095,
+            "ball": {
+              "x": 156.0,
+              "y": -493.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1306.0,
+              "y": -544.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 161916,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1550.0,
+              "y": -910.0
+            },
+            "orientation": 1.49072,
+            "ball": {
+              "x": 544.0,
+              "y": -43.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -343.0,
+              "y": -1369.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 162936,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1260.0,
+              "y": -90.0
+            },
+            "orientation": 0.0369599,
+            "ball": {
+              "x": 381.0,
+              "y": -256.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 406.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 164496,
+            "robot_id": 2,
+            "position": {
+              "x": -2425.0,
+              "y": -212.0
+            },
+            "orientation": -0.0170531,
+            "ball": {
+              "x": 4140.0,
+              "y": -67.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1170
+          },
+          {
+            "type": "receive",
+            "timestamp": 164508,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 60.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 5709.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          }
+        ]
+      },
+      {
+        "robot_id": "3",
+        "robot_name": "SimulatedNao",
+        "team_number": "5",
+        "match_time": "2026-01-29 00:06:27",
+        "log_file": "team_comm_p3.txt",
+        "messages": [
+          {
+            "type": "send",
+            "timestamp": 137280,
+            "robot_id": 3,
+            "position": {
+              "x": -292.0,
+              "y": 1496.0
+            },
+            "orientation": -0.805583,
+            "ball": {
+              "x": 1282.0,
+              "y": -825.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1199
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 10.0
+            },
+            "orientation": 0.01232,
+            "ball": {
+              "x": 4033.0,
+              "y": -81.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 4,
+            "position": {
+              "x": -350.0,
+              "y": 0.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 356.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1490.0
+            },
+            "orientation": 0.751518,
+            "ball": {
+              "x": 1244.0,
+              "y": 869.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 2,
+            "position": {
+              "x": -3280.0,
+              "y": -350.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 3295.0,
+              "y": -118.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 138384,
+            "robot_id": 3,
+            "position": {
+              "x": -292.0,
+              "y": 1496.0
+            },
+            "orientation": -0.805602,
+            "ball": {
+              "x": 1282.0,
+              "y": -825.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1194
+          },
+          {
+            "type": "receive",
+            "timestamp": 139404,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1460.0
+            },
+            "orientation": 1.2936,
+            "ball": {
+              "x": 1494.0,
+              "y": 106.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 140616,
+            "from_robot_id": 4,
+            "position": {
+              "x": -190.0,
+              "y": 90.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 193.0,
+              "y": 81.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": 43.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 141780,
+            "from_robot_id": 4,
+            "position": {
+              "x": -110.0,
+              "y": 70.0
+            },
+            "orientation": -0.923998,
+            "ball": {
+              "x": 256.0,
+              "y": 56.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1344.0,
+              "y": -1069.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 142548,
+            "from_robot_id": 5,
+            "position": {
+              "x": -250.0,
+              "y": -1410.0
+            },
+            "orientation": 0.874718,
+            "ball": {
+              "x": 1156.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 794.0,
+              "y": -2257.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144228,
+            "from_robot_id": 4,
+            "position": {
+              "x": -150.0,
+              "y": 110.0
+            },
+            "orientation": -1.73712,
+            "ball": {
+              "x": 2019.0,
+              "y": 1744.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 268.0,
+              "y": -1919.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144396,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4050.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 5984.0,
+              "y": -181.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144396,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4183.0,
+              "y": -1419.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 146712,
+            "from_robot_id": 5,
+            "position": {
+              "x": 820.0,
+              "y": -1540.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 1156.0,
+              "y": -343.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 1156.0,
+              "y": -343.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 148008,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1240.0,
+              "y": -1610.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 681.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 468.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 149472,
+            "robot_id": 3,
+            "position": {
+              "x": 1000.0,
+              "y": 1150.0
+            },
+            "orientation": -1.26794,
+            "ball": {
+              "x": 3228.0,
+              "y": 19.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1184
+          },
+          {
+            "type": "receive",
+            "timestamp": 149496,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4030.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 6184.0,
+              "y": -218.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 150588,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1770.0,
+              "y": -1900.0
+            },
+            "orientation": -0.0862398,
+            "ball": {
+              "x": -231.0,
+              "y": 519.0
+            },
+            "ball_visibility": "0%",
+            "role": "midfielder",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -2682.0,
+              "y": -18.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 151716,
+            "robot_id": 3,
+            "position": {
+              "x": 798.0,
+              "y": 1043.0
+            },
+            "orientation": -1.29126,
+            "ball": {
+              "x": 1243.0,
+              "y": 132.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 69.0,
+              "y": -203.0
+            },
+            "message_budget": 1181
+          },
+          {
+            "type": "receive",
+            "timestamp": 152832,
+            "from_robot_id": 4,
+            "position": {
+              "x": -610.0,
+              "y": 240.0
+            },
+            "orientation": -0.874718,
+            "ball": {
+              "x": 769.0,
+              "y": 1344.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1994.0,
+              "y": -1682.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 153600,
+            "robot_id": 3,
+            "position": {
+              "x": 729.0,
+              "y": 758.0
+            },
+            "orientation": -1.01882,
+            "ball": {
+              "x": 196.0,
+              "y": 8.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 259.0,
+              "y": -212.0
+            },
+            "message_budget": 1179
+          },
+          {
+            "type": "receive",
+            "timestamp": 154872,
+            "from_robot_id": 4,
+            "position": {
+              "x": -800.0,
+              "y": 330.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1131.0,
+              "y": 1244.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1982.0,
+              "y": -1394.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 155592,
+            "robot_id": 3,
+            "position": {
+              "x": 765.0,
+              "y": 449.0
+            },
+            "orientation": 0.0526597,
+            "ball": {
+              "x": 332.0,
+              "y": -129.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 2389.0,
+              "y": -635.0
+            },
+            "message_budget": 1177
+          },
+          {
+            "type": "receive",
+            "timestamp": 156744,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1580.0,
+              "y": -1380.0
+            },
+            "orientation": 2.59951,
+            "ball": {
+              "x": 1219.0,
+              "y": -619.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -894.0,
+              "y": -719.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 158568,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1640.0,
+              "y": -1100.0
+            },
+            "orientation": 2.67343,
+            "ball": {
+              "x": 569.0,
+              "y": -443.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1069.0,
+              "y": -368.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 159600,
+            "robot_id": 3,
+            "position": {
+              "x": 1060.0,
+              "y": 25.0
+            },
+            "orientation": -0.122657,
+            "ball": {
+              "x": 411.0,
+              "y": -426.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 188.0,
+              "y": -425.0
+            },
+            "message_budget": 1174
+          },
+          {
+            "type": "receive",
+            "timestamp": 160584,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1460.0,
+              "y": -980.0
+            },
+            "orientation": 2.50095,
+            "ball": {
+              "x": 156.0,
+              "y": -493.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1306.0,
+              "y": -544.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 161892,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1550.0,
+              "y": -910.0
+            },
+            "orientation": 1.49072,
+            "ball": {
+              "x": 544.0,
+              "y": -43.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -343.0,
+              "y": -1369.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 162936,
+            "robot_id": 3,
+            "position": {
+              "x": 1262.0,
+              "y": -91.0
+            },
+            "orientation": 0.0332308,
+            "ball": {
+              "x": 382.0,
+              "y": -257.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 403.0,
+              "y": -468.0
+            },
+            "message_budget": 1171
+          },
+          {
+            "type": "receive",
+            "timestamp": 164496,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 60.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 5709.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 164496,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4145.0,
+              "y": -68.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          }
+        ]
+      },
+      {
+        "robot_id": "4",
+        "robot_name": "SimulatedNao",
+        "team_number": "5",
+        "match_time": "2026-01-29 00:06:27",
+        "log_file": "team_comm_p4.txt",
+        "messages": [
+          {
+            "type": "send",
+            "timestamp": 137280,
+            "robot_id": 4,
+            "position": {
+              "x": -351.0,
+              "y": -1.0
+            },
+            "orientation": -0.0272675,
+            "ball": {
+              "x": 351.0,
+              "y": 10.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1199
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 10.0
+            },
+            "orientation": 0.01232,
+            "ball": {
+              "x": 4033.0,
+              "y": -81.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1490.0
+            },
+            "orientation": 0.751518,
+            "ball": {
+              "x": 1244.0,
+              "y": 869.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 2,
+            "position": {
+              "x": -3280.0,
+              "y": -350.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 3295.0,
+              "y": -118.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 138396,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 139404,
+            "from_robot_id": 5,
+            "position": {
+              "x": -300.0,
+              "y": -1460.0
+            },
+            "orientation": 1.2936,
+            "ball": {
+              "x": 1494.0,
+              "y": 106.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 140580,
+            "robot_id": 4,
+            "position": {
+              "x": -194.0,
+              "y": 87.0
+            },
+            "orientation": -0.812739,
+            "ball": {
+              "x": 196.0,
+              "y": 81.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -5.0,
+              "y": 49.0
+            },
+            "message_budget": 1192
+          },
+          {
+            "type": "send",
+            "timestamp": 141744,
+            "robot_id": 4,
+            "position": {
+              "x": -113.0,
+              "y": 69.0
+            },
+            "orientation": -0.923448,
+            "ball": {
+              "x": 260.0,
+              "y": 59.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1339.0,
+              "y": -1068.0
+            },
+            "message_budget": 1191
+          },
+          {
+            "type": "receive",
+            "timestamp": 142548,
+            "from_robot_id": 5,
+            "position": {
+              "x": -250.0,
+              "y": -1410.0
+            },
+            "orientation": 0.874718,
+            "ball": {
+              "x": 1156.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 794.0,
+              "y": -2257.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 144216,
+            "robot_id": 4,
+            "position": {
+              "x": -153.0,
+              "y": 106.0
+            },
+            "orientation": -1.72921,
+            "ball": {
+              "x": 2022.0,
+              "y": 1741.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 266.0,
+              "y": -1923.0
+            },
+            "message_budget": 1189
+          },
+          {
+            "type": "receive",
+            "timestamp": 144384,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4050.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 5984.0,
+              "y": -181.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144384,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4183.0,
+              "y": -1419.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 146712,
+            "from_robot_id": 5,
+            "position": {
+              "x": 820.0,
+              "y": -1540.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 1156.0,
+              "y": -343.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 1156.0,
+              "y": -343.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 148020,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1240.0,
+              "y": -1610.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 681.0,
+              "y": -406.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 468.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 149484,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1000.0,
+              "y": 1150.0
+            },
+            "orientation": -1.26896,
+            "ball": {
+              "x": 3232.0,
+              "y": 18.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": -6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 149484,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4030.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 6184.0,
+              "y": -218.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 150612,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1770.0,
+              "y": -1900.0
+            },
+            "orientation": -0.0862398,
+            "ball": {
+              "x": -231.0,
+              "y": 519.0
+            },
+            "ball_visibility": "0%",
+            "role": "midfielder",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -2682.0,
+              "y": -18.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 151740,
+            "from_robot_id": 3,
+            "position": {
+              "x": 800.0,
+              "y": 1040.0
+            },
+            "orientation": -1.2936,
+            "ball": {
+              "x": 1244.0,
+              "y": 131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 68.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 152820,
+            "robot_id": 4,
+            "position": {
+              "x": -605.0,
+              "y": 240.0
+            },
+            "orientation": -0.863826,
+            "ball": {
+              "x": 764.0,
+              "y": 1340.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1993.0,
+              "y": -1677.0
+            },
+            "message_budget": 1180
+          },
+          {
+            "type": "receive",
+            "timestamp": 153612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 730.0,
+              "y": 760.0
+            },
+            "orientation": -1.02256,
+            "ball": {
+              "x": 193.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 256.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 154872,
+            "robot_id": 4,
+            "position": {
+              "x": -802.0,
+              "y": 326.0
+            },
+            "orientation": -0.789673,
+            "ball": {
+              "x": 1130.0,
+              "y": 1241.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1979.0,
+              "y": -1395.0
+            },
+            "message_budget": 1178
+          },
+          {
+            "type": "receive",
+            "timestamp": 155604,
+            "from_robot_id": 3,
+            "position": {
+              "x": 770.0,
+              "y": 450.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 331.0,
+              "y": -131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 2394.0,
+              "y": -631.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 156756,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1580.0,
+              "y": -1380.0
+            },
+            "orientation": 2.59951,
+            "ball": {
+              "x": 1219.0,
+              "y": -619.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -894.0,
+              "y": -719.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 158568,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1640.0,
+              "y": -1100.0
+            },
+            "orientation": 2.67343,
+            "ball": {
+              "x": 569.0,
+              "y": -443.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1069.0,
+              "y": -368.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 159612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1060.0,
+              "y": 30.0
+            },
+            "orientation": -0.11088,
+            "ball": {
+              "x": 406.0,
+              "y": -431.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 193.0,
+              "y": -431.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 160584,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1460.0,
+              "y": -980.0
+            },
+            "orientation": 2.50095,
+            "ball": {
+              "x": 156.0,
+              "y": -493.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1306.0,
+              "y": -544.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 161916,
+            "from_robot_id": 5,
+            "position": {
+              "x": 1550.0,
+              "y": -910.0
+            },
+            "orientation": 1.49072,
+            "ball": {
+              "x": 544.0,
+              "y": -43.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -343.0,
+              "y": -1369.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 162948,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1260.0,
+              "y": -90.0
+            },
+            "orientation": 0.0369599,
+            "ball": {
+              "x": 381.0,
+              "y": -256.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 406.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 164496,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 60.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 5709.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 164496,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4145.0,
+              "y": -68.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          }
+        ]
+      },
+      {
+        "robot_id": "5",
+        "robot_name": "SimulatedNao",
+        "team_number": "5",
+        "match_time": "2026-01-29 00:06:27",
+        "log_file": "team_comm_p5.txt",
+        "messages": [
+          {
+            "type": "send",
+            "timestamp": 137280,
+            "robot_id": 5,
+            "position": {
+              "x": -296.0,
+              "y": -1489.0
+            },
+            "orientation": 0.76137,
+            "ball": {
+              "x": 1242.0,
+              "y": 873.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1199
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 10.0
+            },
+            "orientation": 0.01232,
+            "ball": {
+              "x": 4033.0,
+              "y": -81.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 4,
+            "position": {
+              "x": -350.0,
+              "y": 0.0
+            },
+            "orientation": -0.0369599,
+            "ball": {
+              "x": 356.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 137292,
+            "from_robot_id": 2,
+            "position": {
+              "x": -3280.0,
+              "y": -350.0
+            },
+            "orientation": 0.13552,
+            "ball": {
+              "x": 3295.0,
+              "y": -118.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 138384,
+            "from_robot_id": 3,
+            "position": {
+              "x": -290.0,
+              "y": 1500.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1281.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 139392,
+            "robot_id": 5,
+            "position": {
+              "x": -297.0,
+              "y": -1463.0
+            },
+            "orientation": 1.29669,
+            "ball": {
+              "x": 1489.0,
+              "y": 108.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "message_budget": 1193
+          },
+          {
+            "type": "receive",
+            "timestamp": 140592,
+            "from_robot_id": 4,
+            "position": {
+              "x": -190.0,
+              "y": 90.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 193.0,
+              "y": 81.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": 43.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 141768,
+            "from_robot_id": 4,
+            "position": {
+              "x": -110.0,
+              "y": 70.0
+            },
+            "orientation": -0.923998,
+            "ball": {
+              "x": 256.0,
+              "y": 56.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1344.0,
+              "y": -1069.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 142536,
+            "robot_id": 5,
+            "position": {
+              "x": -252.0,
+              "y": -1408.0
+            },
+            "orientation": 0.868659,
+            "ball": {
+              "x": 1152.0,
+              "y": -402.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 795.0,
+              "y": -2253.0
+            },
+            "message_budget": 1190
+          },
+          {
+            "type": "receive",
+            "timestamp": 144228,
+            "from_robot_id": 4,
+            "position": {
+              "x": -150.0,
+              "y": 110.0
+            },
+            "orientation": -1.73712,
+            "ball": {
+              "x": 2019.0,
+              "y": 1744.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 268.0,
+              "y": -1919.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144384,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4050.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 5984.0,
+              "y": -181.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 144384,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4183.0,
+              "y": -1419.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 146700,
+            "robot_id": 5,
+            "position": {
+              "x": 823.0,
+              "y": -1537.0
+            },
+            "orientation": -0.0326428,
+            "ball": {
+              "x": 1151.0,
+              "y": -343.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 1151.0,
+              "y": -343.0
+            },
+            "message_budget": 1186
+          },
+          {
+            "type": "send",
+            "timestamp": 148008,
+            "robot_id": 5,
+            "position": {
+              "x": 1241.0,
+              "y": -1613.0
+            },
+            "orientation": 0.134386,
+            "ball": {
+              "x": 685.0,
+              "y": -407.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 467.0,
+              "y": -463.0
+            },
+            "message_budget": 1185
+          },
+          {
+            "type": "receive",
+            "timestamp": 149484,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1000.0,
+              "y": 1150.0
+            },
+            "orientation": -1.26896,
+            "ball": {
+              "x": 3232.0,
+              "y": 18.0
+            },
+            "ball_visibility": "0%",
+            "role": "kickOffForward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -6.0,
+              "y": -6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 149484,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4030.0,
+              "y": -140.0
+            },
+            "orientation": -0.234079,
+            "ball": {
+              "x": 6184.0,
+              "y": -218.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 150576,
+            "robot_id": 5,
+            "position": {
+              "x": 1765.0,
+              "y": -1897.0
+            },
+            "orientation": -0.0926681,
+            "ball": {
+              "x": -230.0,
+              "y": 521.0
+            },
+            "ball_visibility": "0%",
+            "role": "midfielder",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -2676.0,
+              "y": -19.0
+            },
+            "message_budget": 1182
+          },
+          {
+            "type": "receive",
+            "timestamp": 151740,
+            "from_robot_id": 3,
+            "position": {
+              "x": 800.0,
+              "y": 1040.0
+            },
+            "orientation": -1.2936,
+            "ball": {
+              "x": 1244.0,
+              "y": 131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 68.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 152820,
+            "from_robot_id": 4,
+            "position": {
+              "x": -610.0,
+              "y": 240.0
+            },
+            "orientation": -0.874718,
+            "ball": {
+              "x": 769.0,
+              "y": 1344.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1994.0,
+              "y": -1682.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 153612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 730.0,
+              "y": 760.0
+            },
+            "orientation": -1.02256,
+            "ball": {
+              "x": 193.0,
+              "y": 6.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 256.0,
+              "y": -206.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 154896,
+            "from_robot_id": 4,
+            "position": {
+              "x": -800.0,
+              "y": 330.0
+            },
+            "orientation": -0.800798,
+            "ball": {
+              "x": 1131.0,
+              "y": 1244.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1982.0,
+              "y": -1394.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 155604,
+            "from_robot_id": 3,
+            "position": {
+              "x": 770.0,
+              "y": 450.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 331.0,
+              "y": -131.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 2394.0,
+              "y": -631.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 156732,
+            "robot_id": 5,
+            "position": {
+              "x": 1582.0,
+              "y": -1375.0
+            },
+            "orientation": 2.60145,
+            "ball": {
+              "x": 1224.0,
+              "y": -620.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -889.0,
+              "y": -722.0
+            },
+            "message_budget": 1176
+          },
+          {
+            "type": "send",
+            "timestamp": 158568,
+            "robot_id": 5,
+            "position": {
+              "x": 1640.0,
+              "y": -1100.0
+            },
+            "orientation": 2.66912,
+            "ball": {
+              "x": 568.0,
+              "y": -449.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1066.0,
+              "y": -368.0
+            },
+            "message_budget": 1175
+          },
+          {
+            "type": "receive",
+            "timestamp": 159612,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1060.0,
+              "y": 30.0
+            },
+            "orientation": -0.11088,
+            "ball": {
+              "x": 406.0,
+              "y": -431.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 193.0,
+              "y": -431.0
+            }
+          },
+          {
+            "type": "send",
+            "timestamp": 160572,
+            "robot_id": 5,
+            "position": {
+              "x": 1461.0,
+              "y": -981.0
+            },
+            "orientation": 2.49594,
+            "ball": {
+              "x": 159.0,
+              "y": -495.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -1306.0,
+              "y": -549.0
+            },
+            "message_budget": 1173
+          },
+          {
+            "type": "send",
+            "timestamp": 161880,
+            "robot_id": 5,
+            "position": {
+              "x": 1546.0,
+              "y": -909.0
+            },
+            "orientation": 1.48277,
+            "ball": {
+              "x": 544.0,
+              "y": -37.0
+            },
+            "ball_visibility": "0%",
+            "role": "forward",
+            "pass_target": -1,
+            "walk_target": {
+              "x": -341.0,
+              "y": -1368.0
+            },
+            "message_budget": 1172
+          },
+          {
+            "type": "receive",
+            "timestamp": 162948,
+            "from_robot_id": 3,
+            "position": {
+              "x": 1260.0,
+              "y": -90.0
+            },
+            "orientation": 0.0369599,
+            "ball": {
+              "x": 381.0,
+              "y": -256.0
+            },
+            "ball_visibility": "0%",
+            "role": "playBall",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 406.0,
+              "y": -468.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 164496,
+            "from_robot_id": 1,
+            "position": {
+              "x": -4040.0,
+              "y": 60.0
+            },
+            "orientation": 0.0615999,
+            "ball": {
+              "x": 5709.0,
+              "y": -831.0
+            },
+            "ball_visibility": "0%",
+            "role": "goalkeeper",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          },
+          {
+            "type": "receive",
+            "timestamp": 164496,
+            "from_robot_id": 2,
+            "position": {
+              "x": -2430.0,
+              "y": -210.0
+            },
+            "orientation": -0.01232,
+            "ball": {
+              "x": 4145.0,
+              "y": -68.0
+            },
+            "ball_visibility": "0%",
+            "role": "defender",
+            "pass_target": -1,
+            "walk_target": {
+              "x": 6.0,
+              "y": 6.0
+            }
+          }
+        ]
+      }
+    ]
+  }
+};
+        
+        // 可视化控制器
+        class SimRobotViewer {
+            constructor(data) {
+                this.data = data;
+                this.canvas = document.getElementById('field');
+                this.ctx = this.canvas.getContext('2d');
+                this.currentRobotIndex = 0;
+                this.currentMessageIndex = 0;
+                this.isPlaying = false;
+                this.playbackSpeed = 1;
+                this.animationFrame = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupUI();
+                this.setupEventListeners();
+                this.drawField();
+                this.selectRobot(0);
+            }
+            
+            setupUI() {
+                const robotSelect = document.getElementById('robotSelect');
+                const robotList = document.getElementById('robotList');
+                
+                this.data.team.robots.forEach((robot, index) => {
+                    // 下拉选择
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `机器人 ${robot.robot_id} (${robot.messages.length} 条消息)`;
+                    robotSelect.appendChild(option);
+                    
+                    // 列表项
+                    const item = document.createElement('div');
+                    item.className = 'robot-item';
+                    item.textContent = `🤖 ${robot.robot_id} 号`;
+                    item.onclick = () => this.selectRobot(index);
+                    robotList.appendChild(item);
+                });
+            }
+            
+            setupEventListeners() {
+                document.getElementById('robotSelect').onchange = (e) => {
+                    this.selectRobot(parseInt(e.target.value));
+                };
+                
+                document.getElementById('playBtn').onclick = () => this.play();
+                document.getElementById('pauseBtn').onclick = () => this.pause();
+                document.getElementById('resetBtn').onclick = () => this.reset();
+                
+                document.getElementById('speedSelect').onchange = (e) => {
+                    this.playbackSpeed = parseFloat(e.target.value);
+                };
+                
+                document.getElementById('timelineBar').onclick = (e) => {
+                    const rect = e.target.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const percent = x / rect.width;
+                    this.seekTo(percent);
+                };
+            }
+            
+            selectRobot(index) {
+                this.pause();
+                this.currentRobotIndex = index;
+                this.currentMessageIndex = 0;
+                
+                // 更新 UI
+                document.querySelectorAll('.robot-item').forEach((item, i) => {
+                    item.classList.toggle('active', i === index);
+                });
+                document.getElementById('robotSelect').value = index;
+                
+                this.updateDisplay();
+            }
+            
+            play() {
+                this.isPlaying = true;
+                this.animate();
+            }
+            
+            pause() {
+                this.isPlaying = false;
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
+                }
+            }
+            
+            reset() {
+                this.pause();
+                this.currentMessageIndex = 0;
+                this.updateDisplay();
+            }
+            
+            seekTo(percent) {
+                const robot = this.data.team.robots[this.currentRobotIndex];
+                this.currentMessageIndex = Math.floor(robot.messages.length * percent);
+                this.updateDisplay();
+            }
+            
+            animate() {
+                if (!this.isPlaying) return;
+                
+                const robot = this.data.team.robots[this.currentRobotIndex];
+                if (this.currentMessageIndex < robot.messages.length - 1) {
+                    this.currentMessageIndex++;
+                    this.updateDisplay();
+                    
+                    const delay = 100 / this.playbackSpeed;
+                    setTimeout(() => {
+                        this.animationFrame = requestAnimationFrame(() => this.animate());
+                    }, delay);
+                } else {
+                    this.pause();
+                }
+            }
+            
+            updateDisplay() {
+                const robot = this.data.team.robots[this.currentRobotIndex];
+                const message = robot.messages[this.currentMessageIndex];
+                
+                if (!message) return;
+                
+                // 更新场地显示
+                this.drawField();
+                this.drawRobot(message);
+                this.drawBall(message);
+                
+                // 更新信息面板
+                document.getElementById('posInfo').textContent = 
+                    `(${message.position.x.toFixed(0)}, ${message.position.y.toFixed(0)})`;
+                document.getElementById('orientInfo').textContent = 
+                    message.orientation.toFixed(3);
+                document.getElementById('ballInfo').textContent = 
+                    `(${message.ball.x.toFixed(0)}, ${message.ball.y.toFixed(0)})`;
+                document.getElementById('roleInfo').textContent = message.role;
+                document.getElementById('visInfo').textContent = message.ball_visibility;
+                
+                // 更新时间轴
+                const progress = (this.currentMessageIndex / robot.messages.length) * 100;
+                document.getElementById('timelineProgress').style.width = progress + '%';
+                document.getElementById('timelineMarker').style.left = progress + '%';
+                document.getElementById('currentTime').textContent = message.timestamp;
+                document.getElementById('messageCount').textContent = 
+                    `${this.currentMessageIndex + 1} / ${robot.messages.length}`;
+            }
+            
+            drawField() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                // 清空画布
+                ctx.fillStyle = '#2d5016';
+                ctx.fillRect(0, 0, w, h);
+                
+                // 绘制场地线条
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                
+                // 中线
+                ctx.beginPath();
+                ctx.moveTo(w/2, 0);
+                ctx.lineTo(w/2, h);
+                ctx.stroke();
+                
+                // 中圈
+                ctx.beginPath();
+                ctx.arc(w/2, h/2, 60, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // 禁区
+                ctx.strokeRect(20, h/2 - 100, 80, 200);
+                ctx.strokeRect(w - 100, h/2 - 100, 80, 200);
+                
+                // 球门
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(0, h/2 - 40, 20, 80);
+                ctx.fillRect(w - 20, h/2 - 40, 20, 80);
+            }
+            
+            drawRobot(message) {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                // 转换坐标 (场地坐标 -> 画布坐标)
+                const x = (message.position.x + 4500) / 9000 * w;
+                const y = (message.position.y + 3000) / 6000 * h;
+                
+                // 绘制机器人
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                ctx.arc(x, y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 绘制朝向
+                const dirX = x + Math.cos(message.orientation) * 25;
+                const dirY = y + Math.sin(message.orientation) * 25;
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(dirX, dirY);
+                ctx.stroke();
+                
+                // 绘制机器人编号
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(message.robot_id || message.from_robot_id, x, y - 25);
+            }
+            
+            drawBall(message) {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                // 转换坐标
+                const x = (message.ball.x + 4500) / 9000 * w;
+                const y = (message.ball.y + 3000) / 6000 * h;
+                
+                // 绘制球
+                ctx.fillStyle = 'orange';
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+        
+        // 启动应用
+        const viewer = new SimRobotViewer(DATA);
+    </script>
+</body>
+</html>

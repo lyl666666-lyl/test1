@@ -1,0 +1,114 @@
+<Simulation>
+
+  <Include href="Includes/NaoV6H25.rsi3"/>
+  <Include href="Includes/Ball2016SPL.rsi3"/>
+  <Include href="Includes/Field2020SPL.rsi3"/>
+
+  <Scene name="GameFastBallContest" controller="SimulatedNao" stepLength="0.012" color="rgb(65%, 65%, 70%)">
+    <PointLight z="9m" ambientColor="rgb(50%, 50%, 50%)"/>
+
+    <!-- Enhanced 5v5 setup with ball contest scenarios -->
+    <Compound name="teams">
+      <Compound name="B-Human">
+        <Compound name="5"/>
+        <Compound name="black"/>
+        <Compound name="purple"/>
+      </Compound>
+      <Compound name="B-Team">
+        <Compound name="70"/>
+        <Compound name="red"/>
+        <Compound name="blue"/>
+      </Compound>
+    </Compound>
+
+    <Compound name="robots">
+      <!-- B-Human Team (Black/Purple) - Right side of field -->
+      <!-- Robot 1: Goalkeeper -->
+      <Body ref="Nao" name="robot1">
+        <Translation x="4" y="0" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="purple"/>
+      </Body>
+      
+      <!-- Robot 2: Forward (potential contestant) -->
+      <Body ref="Nao" name="robot2">
+        <Translation x="0.5" y="-1" z="320mm"/>
+        <Rotation z="-45degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      
+      <!-- Robot 3: Midfielder (potential support) -->
+      <Body ref="Nao" name="robot3">
+        <Translation x="1" y="-2" z="320mm"/>
+        <Rotation z="-60degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      
+      <!-- Robot 4: Defender Left -->
+      <Body ref="Nao" name="robot4">
+        <Translation x="2.5" y="-1.5" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+      
+      <!-- Robot 5: Defender Right -->
+      <Body ref="Nao" name="robot5">
+        <Translation x="2.5" y="1.5" z="320mm"/>
+        <Rotation z="-90degree"/>
+        <Set name="TeamColor" value="black"/>
+      </Body>
+
+      <!-- Opponent Team (Red/Blue) - Left side of field -->
+      <!-- Opponent 1: Goalkeeper -->
+      <Body ref="Nao" name="robot21">
+        <Translation x="-4" y="0" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="blue"/>
+      </Body>
+      
+      <!-- Opponent 2: Forward (contestant) -->
+      <Body ref="Nao" name="robot22">
+        <Translation x="-0.5" y="1" z="320mm"/>
+        <Rotation z="135degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      
+      <!-- Opponent 3: Midfielder -->
+      <Body ref="Nao" name="robot23">
+        <Translation x="-1" y="2" z="320mm"/>
+        <Rotation z="120degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      
+      <!-- Opponent 4: Defender Left -->
+      <Body ref="Nao" name="robot24">
+        <Translation x="-2.5" y="1.5" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+      
+      <!-- Opponent 5: Defender Right -->
+      <Body ref="Nao" name="robot25">
+        <Translation x="-2.5" y="-1.5" z="320mm"/>
+        <Rotation z="90degree"/>
+        <Set name="TeamColor" value="red"/>
+      </Body>
+    </Compound>
+
+    <!-- Ball positioned for contest -->
+    <Compound name="balls">
+      <Body ref="ball">
+        <Translation z="32.5mm"/>
+      </Body>
+    </Compound>
+
+    <Compound ref="field"/>
+    <Compound name="extras"/>
+
+    <Compound name="scenarios">
+      <Compound name="5vs5"/>
+    </Compound>
+
+  </Scene>
+
+</Simulation>

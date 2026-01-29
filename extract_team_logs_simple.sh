@@ -112,6 +112,66 @@ if [ ${#TEAM_A[@]} -gt 0 ]; then
             fi
         done
         
+        # 生成增强版日志
+        echo "  生成增强版日志..."
+        for team_comm_file in "$ROBOT_DIR"/team_comm_p*.txt; do
+            if [ -f "$team_comm_file" ]; then
+                enhanced_file="${team_comm_file%.txt}_enhanced.txt"
+                
+                # 复制原始内容
+                cat "$team_comm_file" > "$enhanced_file"
+                
+                # 添加分隔线
+                echo "" >> "$enhanced_file"
+                echo "========================================" >> "$enhanced_file"
+                echo "从 bhumand 日志提取的额外信息" >> "$enhanced_file"
+                echo "========================================" >> "$enhanced_file"
+                echo "" >> "$enhanced_file"
+                
+                # 查找对应的 bhumand 日志
+                for bhumand_file in "$ROBOT_DIR"/bhumand_*.log; do
+                    if [ -f "$bhumand_file" ]; then
+                        # 提取电池警告
+                        battery_warnings=$(grep -i "battery\|电池" "$bhumand_file" 2>/dev/null)
+                        if [ -n "$battery_warnings" ]; then
+                            echo "## 电池电量警告" >> "$enhanced_file"
+                            echo "$battery_warnings" | head -20 >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                        
+                        # 提取温度警告
+                        temp_warnings=$(grep -i "temperature\|温度\|°C" "$bhumand_file" 2>/dev/null)
+                        if [ -n "$temp_warnings" ]; then
+                            echo "## 温度警告" >> "$enhanced_file"
+                            echo "$temp_warnings" | head -20 >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                        
+                        # 提取机器人状态
+                        state_changes=$(grep -i "fallen\|upright\|staggering\|倒地\|站立" "$bhumand_file" 2>/dev/null)
+                        if [ -n "$state_changes" ]; then
+                            echo "## 机器人状态变化" >> "$enhanced_file"
+                            echo "$state_changes" | head -20 >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                        
+                        # 提取启动信息
+                        startup_info=$(grep -i "team\|player\|队伍\|球员" "$bhumand_file" 2>/dev/null | head -10)
+                        if [ -n "$startup_info" ]; then
+                            echo "## 启动信息" >> "$enhanced_file"
+                            echo "$startup_info" >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                    fi
+                done
+                
+                # 如果没有找到额外信息
+                if ! grep -q "## " "$enhanced_file" 2>/dev/null; then
+                    echo "（未找到 bhumand 日志或无额外信息）" >> "$enhanced_file"
+                fi
+            fi
+        done
+        
         echo "  ✓ 完成"
     done
     echo ""
@@ -167,6 +227,66 @@ if [ ${#TEAM_B[@]} -gt 0 ]; then
             if [ -n "$file" ]; then
                 scp -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
                     nao@$ip:"$file" "$ROBOT_DIR/" 2>/dev/null
+            fi
+        done
+        
+        # 生成增强版日志
+        echo "  生成增强版日志..."
+        for team_comm_file in "$ROBOT_DIR"/team_comm_p*.txt; do
+            if [ -f "$team_comm_file" ]; then
+                enhanced_file="${team_comm_file%.txt}_enhanced.txt"
+                
+                # 复制原始内容
+                cat "$team_comm_file" > "$enhanced_file"
+                
+                # 添加分隔线
+                echo "" >> "$enhanced_file"
+                echo "========================================" >> "$enhanced_file"
+                echo "从 bhumand 日志提取的额外信息" >> "$enhanced_file"
+                echo "========================================" >> "$enhanced_file"
+                echo "" >> "$enhanced_file"
+                
+                # 查找对应的 bhumand 日志
+                for bhumand_file in "$ROBOT_DIR"/bhumand_*.log; do
+                    if [ -f "$bhumand_file" ]; then
+                        # 提取电池警告
+                        battery_warnings=$(grep -i "battery\|电池" "$bhumand_file" 2>/dev/null)
+                        if [ -n "$battery_warnings" ]; then
+                            echo "## 电池电量警告" >> "$enhanced_file"
+                            echo "$battery_warnings" | head -20 >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                        
+                        # 提取温度警告
+                        temp_warnings=$(grep -i "temperature\|温度\|°C" "$bhumand_file" 2>/dev/null)
+                        if [ -n "$temp_warnings" ]; then
+                            echo "## 温度警告" >> "$enhanced_file"
+                            echo "$temp_warnings" | head -20 >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                        
+                        # 提取机器人状态
+                        state_changes=$(grep -i "fallen\|upright\|staggering\|倒地\|站立" "$bhumand_file" 2>/dev/null)
+                        if [ -n "$state_changes" ]; then
+                            echo "## 机器人状态变化" >> "$enhanced_file"
+                            echo "$state_changes" | head -20 >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                        
+                        # 提取启动信息
+                        startup_info=$(grep -i "team\|player\|队伍\|球员" "$bhumand_file" 2>/dev/null | head -10)
+                        if [ -n "$startup_info" ]; then
+                            echo "## 启动信息" >> "$enhanced_file"
+                            echo "$startup_info" >> "$enhanced_file"
+                            echo "" >> "$enhanced_file"
+                        fi
+                    fi
+                done
+                
+                # 如果没有找到额外信息
+                if ! grep -q "## " "$enhanced_file" 2>/dev/null; then
+                    echo "（未找到 bhumand 日志或无额外信息）" >> "$enhanced_file"
+                fi
             fi
         done
         

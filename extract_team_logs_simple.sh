@@ -2,44 +2,235 @@
 
 # 按队伍提取最新日志（简化版）
 # 使用方法: ./extract_team_logs_simple.sh <时间范围(分钟,默认10)>
-# 
-# 在脚本中配置机器人信息（见下方 TEAM_A 和 TEAM_B）
 
 PROJECT_DIR="/home/lyl/test/MyBuman"
 LOCAL_LOGS_DIR="$PROJECT_DIR/Config/Real_Logs"
 ROBOT_LOGS_DIR="/home/nao/logs"
+ROBOT_PASSWORD="nao"
 
 # ============================================
-# 配置区域 - 在这里配置你的机器人
+# 配置区域
 # ============================================
 
-# 队伍A配置: "IP:队内位置"
-# 例如: "10.0.70.1:1" 表示 10.0.70.1 是队内1号位
 TEAM_A=(
-    "10.0.70.15:3"    # 15号机器人，队内3号位
-    # "10.0.70.2:2"   # 取消注释并修改IP和位置
-    # "10.0.70.3:3"
-    # "10.0.70.4:4"
-    # "10.0.70.5:5"
+    "10.0.70.12:1"
+    "10.0.70.1:2"
+    #"10.0.70.12:3"
+    "10.0.70.15:4"
+    #"10.0.70.15:5"
 )
 
-# 队伍B配置: "IP:队内位置"
 TEAM_B=(
-    "10.0.70.13:3"    # 13号机器人，队内3号位
-    # "10.0.70.7:2"
-    #"10.0.70.13:3"
-    # "10.0.70.9:4"
-    # "10.0.70.10:5"
+    #"10.0.70.13:1"
+    "10.0.70.13:2"
+    #"10.0.70.15:3"
+    "10.0.70.14:4"
+    "10.0.70.11:5"
 )
 
 # ============================================
-# 以下代码无需修改
+# 函数定义
 # ============================================
 
-# 时间范围
-TIME_RANGE=${1:-10}
+generate_enhanced_log_remote() {
+    local remote_team_comm="$1"
+    local output_file="$2"
+    local robot_ip="$3"
+    
+    local team_comm_content=$(sshpass -p "$ROBOT_PASSWORD" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+        nao@$robot_ip "cat $remote_team_comm" 2>/dev/null)
+    
+    if [ -z "$team_comm_content" ]; then
+        return 1
+    fi
+    
+    python3 - "$output_file" << PYTHON_SCRIPT
+import sys
+import re
+from datetime import datetime, timedelta
 
-# 生成时间戳
+team_comm_content = """$team_comm_content"""
+
+def parse_time(base_time_str, time_ms):
+    try:
+        base_time = datetime.strptime(base_time_str, "%Y-%m-%d %H:%M:%S")
+        delta = timedelta(milliseconds=time_ms)
+        result_time = base_time + delta
+        return result_time.strftime("%Y-%m-%d %H:%M:%S")
+    except:
+        return base_time_str
+
+def convert_role(role):
+    role_map = {
+        'kickOffForward': ('kickOffForward', '开球前锋'),
+        'striker': ('striker', '前锋'),
+        'supporter': ('supporter', '支援'),
+        'defender': ('defender', '后卫'),
+        'goalkeeper': ('goalkeeper', '守门员'),
+    }
+    return role_map.get(role, (role, role))
+
+def convert_state(state):
+    state_map = {
+        'upright': '站立',
+        'fallen': '倒地',
+        'staggering': '摇晃',
+        'falling': '正在倒下',
+        'squatting': '下蹲',
+        'pickedUp': '被拿起',
+    }
+    return state_map.get(state, state)
+
+def rad_to_deg(rad_str):
+    try:
+        import math
+        rad = float(rad_str)
+        deg = int(rad * 180 / math.pi)
+        return deg
+    except:
+        return 0
+
+output_file = sys.argv[1]
+lines = team_comm_content.split('\\n')
+
+base_time = ""
+team_num = ""
+player_num = ""
+
+for line in lines:
+    if line.startswith("比赛时间:"):
+        base_time = line.split(":", 1)[1].strip()
+    elif line.startswith("队伍编号:"):
+        team_num = line.split(":", 1)[1].strip()
+    elif line.startswith("机器人编号:"):
+        player_num = line.split(":", 1)[1].strip()
+
+with open(output_file, 'w', encoding='utf-8') as out:
+    out.write("=" * 40 + "\\n")
+    out.write("团队通信日志 - 原始内容\\n")
+    out.write("=" * 40 + "\\n")
+    out.write("\\n")
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        
+        match_send = re.match(r'\[发送\]\s+时间=(\d+)ms', line)
+        match_recv = re.match(r'\[接收\]\s+时间=(\d+)ms\s+来自机器人(\d+)号', line)
+        
+        if match_send or match_recv:
+            if match_send:
+                time_ms = int(match_send.group(1))
+                from_robot = None
+            else:
+                time_ms = int(match_recv.group(1))
+                from_robot = match_recv.group(2)
+            
+            msg_data = {}
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith('['):
+                content = lines[i].strip()
+                if not content:
+                    i += 1
+                    continue
+                
+                if content.startswith("位置:"):
+                    match = re.search(r'\(([^)]+)\)\s+朝向=([0-9.-]+)', content)
+                    if match:
+                        msg_data['position'] = match.group(1)
+                        msg_data['heading'] = match.group(2)
+                
+                elif content.startswith("球:"):
+                    match = re.search(r'\(([^)]+)\)\s+可见度=(\d+)%', content)
+                    if match:
+                        msg_data['ball_pos'] = match.group(1)
+                        msg_data['ball_conf'] = int(match.group(2))
+                
+                elif content.startswith("角色:"):
+                    match = re.search(r'角色:\s+(\w+)', content)
+                    if match:
+                        msg_data['role'] = match.group(1)
+                
+                elif content.startswith("传球目标:"):
+                    match = re.search(r'传球目标:\s+([^|]+)\s+\|\s+行走目标:\s+\(([^)]+)\)', content)
+                    if match:
+                        msg_data['pass_target'] = match.group(1).strip()
+                        msg_data['walk_target'] = match.group(2)
+                
+                elif content.startswith("机器人状态:"):
+                    match = re.search(r'机器人状态:\s+(\w+)', content)
+                    if match:
+                        msg_data['robot_state'] = match.group(1)
+                
+                elif content.startswith("裁判手势:"):
+                    match = re.search(r'裁判手势:\s+(\w+)', content)
+                    if match:
+                        msg_data['referee_gesture'] = match.group(1)
+                
+                i += 1
+            
+            timestamp = parse_time(base_time, time_ms)
+            
+            if from_robot:
+                out.write(f"[{timestamp}] 收到队友 #{from_robot} 的消息\\n")
+            else:
+                out.write(f"[{timestamp}] 发送消息到队友\\n")
+            
+            out.write(f"  队伍号: {team_num}\\n")
+            out.write(f"  球员号: {player_num}\\n")
+            
+            ball_pos = msg_data.get('ball_pos', '0, 0')
+            ball_conf = msg_data.get('ball_conf', 0)
+            confidence = ball_conf / 100.0
+            out.write(f"  球位置: ({ball_pos}) 置信度: {confidence:.2f} 可见度: {ball_conf}%\\n")
+            
+            position = msg_data.get('position', '0, 0')
+            heading = msg_data.get('heading', '0')
+            heading_deg = rad_to_deg(heading)
+            out.write(f"  机器人位置: ({position}, {heading_deg}°)\\n")
+            
+            role = msg_data.get('role', '')
+            if role:
+                role_en, role_cn = convert_role(role)
+                out.write(f"  角色: {role_en} ({role_cn})\\n")
+            
+            walk_target = msg_data.get('walk_target', '')
+            if walk_target and walk_target != '0,0':
+                out.write(f"  行走目标: ({walk_target})\\n")
+            
+            pass_target = msg_data.get('pass_target', '')
+            if pass_target and pass_target != '-1':
+                out.write(f"  传球目标: {pass_target}\\n")
+            
+            robot_state = msg_data.get('robot_state', '')
+            if robot_state and robot_state != 'upright':
+                state_cn = convert_state(robot_state)
+                out.write(f"  机器人状态: {robot_state} ({state_cn})\\n")
+            
+            referee_gesture = msg_data.get('referee_gesture', '')
+            if referee_gesture and referee_gesture != 'none':
+                out.write(f"  裁判手势: {referee_gesture}\\n")
+            
+            out.write("\\n")
+            continue
+        
+        i += 1
+
+PYTHON_SCRIPT
+}
+
+# ============================================
+# 主程序
+# ============================================
+
+# 检查 sshpass 是否安装
+if ! command -v sshpass &> /dev/null; then
+    echo "错误: 未安装 sshpass"
+    echo "请运行: sudo apt-get install sshpass"
+    exit 1
+fi
+
+TIME_RANGE=${1:-10}
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SESSION_DIR="$LOCAL_LOGS_DIR/${TIMESTAMP}"
 
@@ -52,7 +243,6 @@ echo "保存目录: $SESSION_DIR"
 echo "==========================================="
 echo ""
 
-# 创建目录
 mkdir -p "$SESSION_DIR/TeamA"
 mkdir -p "$SESSION_DIR/TeamB"
 
@@ -63,7 +253,6 @@ if [ ${#TEAM_A[@]} -gt 0 ]; then
     echo "-------------------------------------------"
     
     for entry in "${TEAM_A[@]}"; do
-        # 跳过注释行
         [[ $entry =~ ^#.*$ ]] && continue
         [[ -z $entry ]] && continue
         
@@ -74,7 +263,6 @@ if [ ${#TEAM_A[@]} -gt 0 ]; then
         echo ""
         echo "位置 $pos - 机器人 #$robot_num ($ip)"
         
-        # 检查在线
         if ! ping -c 1 -W 1 $ip > /dev/null 2>&1; then
             echo "  ✗ 离线"
             continue
@@ -82,93 +270,29 @@ if [ ${#TEAM_A[@]} -gt 0 ]; then
         
         echo "  ✓ 在线"
         
-        # 创建目录
         ROBOT_DIR="$SESSION_DIR/TeamA/player${pos}_robot${robot_num}"
         mkdir -p "$ROBOT_DIR"
         
-        # 查找最近的文件（只要 .txt 文件）
         echo "  查找日志..."
         
-        RECENT_FILES=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+        RECENT_TXT_FILES=$(sshpass -p "$ROBOT_PASSWORD" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
             nao@$ip \
-            "find $ROBOT_LOGS_DIR -type f -name '*.txt' -mmin -${TIME_RANGE} 2>/dev/null")
+            "find $ROBOT_LOGS_DIR -type f -name 'team_comm_p*.txt' -mmin -${TIME_RANGE} 2>/dev/null")
         
-        if [ -z "$RECENT_FILES" ]; then
+        if [ -z "$RECENT_TXT_FILES" ]; then
             echo "  ✗ 未找到最近 ${TIME_RANGE} 分钟的日志"
             continue
         fi
         
-        FILE_COUNT=$(echo "$RECENT_FILES" | wc -l)
-        echo "  ✓ 找到 $FILE_COUNT 个文件，下载中..."
+        FILE_COUNT=$(echo "$RECENT_TXT_FILES" | wc -l)
+        echo "  ✓ 找到 $FILE_COUNT 个 team_comm 文件"
         
-        # 下载文件
-        downloaded=0
-        echo "$RECENT_FILES" | while read file; do
-            if [ -n "$file" ]; then
-                if scp -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-                    nao@$ip:"$file" "$ROBOT_DIR/" 2>/dev/null; then
-                    downloaded=$((downloaded + 1))
-                fi
-            fi
-        done
-        
-        # 生成增强版日志
-        echo "  生成增强版日志..."
-        for team_comm_file in "$ROBOT_DIR"/team_comm_p*.txt; do
-            if [ -f "$team_comm_file" ]; then
-                enhanced_file="${team_comm_file%.txt}_enhanced.txt"
-                
-                # 复制原始内容
-                cat "$team_comm_file" > "$enhanced_file"
-                
-                # 添加分隔线
-                echo "" >> "$enhanced_file"
-                echo "========================================" >> "$enhanced_file"
-                echo "从 bhumand 日志提取的额外信息" >> "$enhanced_file"
-                echo "========================================" >> "$enhanced_file"
-                echo "" >> "$enhanced_file"
-                
-                # 查找对应的 bhumand 日志
-                for bhumand_file in "$ROBOT_DIR"/bhumand_*.log; do
-                    if [ -f "$bhumand_file" ]; then
-                        # 提取电池警告
-                        battery_warnings=$(grep -i "battery\|电池" "$bhumand_file" 2>/dev/null)
-                        if [ -n "$battery_warnings" ]; then
-                            echo "## 电池电量警告" >> "$enhanced_file"
-                            echo "$battery_warnings" | head -20 >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                        
-                        # 提取温度警告
-                        temp_warnings=$(grep -i "temperature\|温度\|°C" "$bhumand_file" 2>/dev/null)
-                        if [ -n "$temp_warnings" ]; then
-                            echo "## 温度警告" >> "$enhanced_file"
-                            echo "$temp_warnings" | head -20 >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                        
-                        # 提取机器人状态
-                        state_changes=$(grep -i "fallen\|upright\|staggering\|倒地\|站立" "$bhumand_file" 2>/dev/null)
-                        if [ -n "$state_changes" ]; then
-                            echo "## 机器人状态变化" >> "$enhanced_file"
-                            echo "$state_changes" | head -20 >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                        
-                        # 提取启动信息
-                        startup_info=$(grep -i "team\|player\|队伍\|球员" "$bhumand_file" 2>/dev/null | head -10)
-                        if [ -n "$startup_info" ]; then
-                            echo "## 启动信息" >> "$enhanced_file"
-                            echo "$startup_info" >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                    fi
-                done
-                
-                # 如果没有找到额外信息
-                if ! grep -q "## " "$enhanced_file" 2>/dev/null; then
-                    echo "（未找到 bhumand 日志或无额外信息）" >> "$enhanced_file"
-                fi
+        echo "  远程读取并生成增强版日志..."
+        echo "$RECENT_TXT_FILES" | while read remote_file; do
+            if [ -n "$remote_file" ]; then
+                filename=$(basename "$remote_file")
+                enhanced_file="$ROBOT_DIR/${filename%.txt}_enhanced.txt"
+                generate_enhanced_log_remote "$remote_file" "$enhanced_file" "$ip"
             fi
         done
         
@@ -184,7 +308,6 @@ if [ ${#TEAM_B[@]} -gt 0 ]; then
     echo "-------------------------------------------"
     
     for entry in "${TEAM_B[@]}"; do
-        # 跳过注释行
         [[ $entry =~ ^#.*$ ]] && continue
         [[ -z $entry ]] && continue
         
@@ -195,7 +318,6 @@ if [ ${#TEAM_B[@]} -gt 0 ]; then
         echo ""
         echo "位置 $pos - 机器人 #$robot_num ($ip)"
         
-        # 检查在线
         if ! ping -c 1 -W 1 $ip > /dev/null 2>&1; then
             echo "  ✗ 离线"
             continue
@@ -203,90 +325,29 @@ if [ ${#TEAM_B[@]} -gt 0 ]; then
         
         echo "  ✓ 在线"
         
-        # 创建目录
         ROBOT_DIR="$SESSION_DIR/TeamB/player${pos}_robot${robot_num}"
         mkdir -p "$ROBOT_DIR"
         
-        # 查找最近的文件（只要 .txt 文件）
         echo "  查找日志..."
         
-        RECENT_FILES=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+        RECENT_TXT_FILES=$(sshpass -p "$ROBOT_PASSWORD" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
             nao@$ip \
-            "find $ROBOT_LOGS_DIR -type f -name '*.txt' -mmin -${TIME_RANGE} 2>/dev/null")
+            "find $ROBOT_LOGS_DIR -type f -name 'team_comm_p*.txt' -mmin -${TIME_RANGE} 2>/dev/null")
         
-        if [ -z "$RECENT_FILES" ]; then
+        if [ -z "$RECENT_TXT_FILES" ]; then
             echo "  ✗ 未找到最近 ${TIME_RANGE} 分钟的日志"
             continue
         fi
         
-        FILE_COUNT=$(echo "$RECENT_FILES" | wc -l)
-        echo "  ✓ 找到 $FILE_COUNT 个文件，下载中..."
+        FILE_COUNT=$(echo "$RECENT_TXT_FILES" | wc -l)
+        echo "  ✓ 找到 $FILE_COUNT 个 team_comm 文件"
         
-        # 下载文件
-        echo "$RECENT_FILES" | while read file; do
-            if [ -n "$file" ]; then
-                scp -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-                    nao@$ip:"$file" "$ROBOT_DIR/" 2>/dev/null
-            fi
-        done
-        
-        # 生成增强版日志
-        echo "  生成增强版日志..."
-        for team_comm_file in "$ROBOT_DIR"/team_comm_p*.txt; do
-            if [ -f "$team_comm_file" ]; then
-                enhanced_file="${team_comm_file%.txt}_enhanced.txt"
-                
-                # 复制原始内容
-                cat "$team_comm_file" > "$enhanced_file"
-                
-                # 添加分隔线
-                echo "" >> "$enhanced_file"
-                echo "========================================" >> "$enhanced_file"
-                echo "从 bhumand 日志提取的额外信息" >> "$enhanced_file"
-                echo "========================================" >> "$enhanced_file"
-                echo "" >> "$enhanced_file"
-                
-                # 查找对应的 bhumand 日志
-                for bhumand_file in "$ROBOT_DIR"/bhumand_*.log; do
-                    if [ -f "$bhumand_file" ]; then
-                        # 提取电池警告
-                        battery_warnings=$(grep -i "battery\|电池" "$bhumand_file" 2>/dev/null)
-                        if [ -n "$battery_warnings" ]; then
-                            echo "## 电池电量警告" >> "$enhanced_file"
-                            echo "$battery_warnings" | head -20 >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                        
-                        # 提取温度警告
-                        temp_warnings=$(grep -i "temperature\|温度\|°C" "$bhumand_file" 2>/dev/null)
-                        if [ -n "$temp_warnings" ]; then
-                            echo "## 温度警告" >> "$enhanced_file"
-                            echo "$temp_warnings" | head -20 >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                        
-                        # 提取机器人状态
-                        state_changes=$(grep -i "fallen\|upright\|staggering\|倒地\|站立" "$bhumand_file" 2>/dev/null)
-                        if [ -n "$state_changes" ]; then
-                            echo "## 机器人状态变化" >> "$enhanced_file"
-                            echo "$state_changes" | head -20 >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                        
-                        # 提取启动信息
-                        startup_info=$(grep -i "team\|player\|队伍\|球员" "$bhumand_file" 2>/dev/null | head -10)
-                        if [ -n "$startup_info" ]; then
-                            echo "## 启动信息" >> "$enhanced_file"
-                            echo "$startup_info" >> "$enhanced_file"
-                            echo "" >> "$enhanced_file"
-                        fi
-                    fi
-                done
-                
-                # 如果没有找到额外信息
-                if ! grep -q "## " "$enhanced_file" 2>/dev/null; then
-                    echo "（未找到 bhumand 日志或无额外信息）" >> "$enhanced_file"
-                fi
+        echo "  远程读取并生成增强版日志..."
+        echo "$RECENT_TXT_FILES" | while read remote_file; do
+            if [ -n "$remote_file" ]; then
+                filename=$(basename "$remote_file")
+                enhanced_file="$ROBOT_DIR/${filename%.txt}_enhanced.txt"
+                generate_enhanced_log_remote "$remote_file" "$enhanced_file" "$ip"
             fi
         done
         
@@ -303,6 +364,12 @@ cat > "$SESSION_DIR/README.txt" << EOF
 采集时间: $(date +"%Y年%m月%d日 %H:%M:%S")
 时间戳: $TIMESTAMP
 时间范围: 最近 ${TIME_RANGE} 分钟
+
+说明:
+- 只生成 team_comm_p*_enhanced.txt 文件（仅包含团队通信日志）
+- 所有日志通过远程读取生成（不占用本地空间）
+- 自动使用密码连接（密码: nao）
+- 不包含 bhumand 额外信息
 
 队伍A:
 $(for entry in "${TEAM_A[@]}"; do
@@ -323,9 +390,6 @@ $(for entry in "${TEAM_B[@]}"; do
     num=$(echo $ip | awk -F. '{print $4}')
     echo "  位置 $pos - 机器人 #$num ($ip)"
 done | sort)
-
-目录结构:
-$(tree -L 2 "$SESSION_DIR" 2>/dev/null || find "$SESSION_DIR" -type d | sed 's|[^/]*/| |g')
 EOF
 
 echo "==========================================="
